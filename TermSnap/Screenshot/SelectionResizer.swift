@@ -40,8 +40,8 @@ struct SelectionResizer {
 
     func cursorAt(_ point: NSPoint) -> NSCursor {
         if let handle = handleAt(point) { return handle.cursor() }
-        if selectionRect.contains(point) { return .openHand }
-        return .crosshair
+        if selectionRect.contains(point) { return .arrow }
+        return .arrow
     }
 
     func rectByResizing(_ rect: NSRect, handle: ResizeHandle, delta: NSPoint, minSize: CGFloat = 20) -> NSRect {

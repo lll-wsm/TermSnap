@@ -1,0 +1,55 @@
+"Save Format" = "Save Format";
+"Save to:" = "Save to:";
+"Choose\u{2026}" = "Choose\u{2026}";
+"Export" = "Export";
+"Show Icon in Context Menu" = "Show Icon in Context Menu";
+"Finder Extension" = "Finder Extension";
+"Capture" = "Capture";
+"Shortcuts" = "Shortcuts";
+"Click Record then press the key combination you want to use." = "Click Record then press the key combination you want to use.";
+"Desktop" = "Desktop";
+"Choose default save location for screenshots" = "Choose default save location for screenshots";
+
+"Take Screenshot" = "Take Screenshot";
+"Enable Finder Extension\u{2026}" = "Enable Finder Extension\u{2026}";
+"Settings\u{2026}" = "Settings\u{2026}";
+"Quit TermSnap" = "Quit TermSnap";
+"Settings" = "Settings";
+
+"Enable Finder Extension" = "Enable Finder Extension";
+"To use \"Open Terminal Here\" in Finder's context menu, enable the TermSnap Finder Extension in System Settings." = "To use \"Open Terminal Here\" in Finder's context menu, enable the TermSnap Finder Extension in System Settings.";
+"Open System Settings" = "Open System Settings";
+"I've Enabled It" = "I've Enabled It";
+
+"Screen Recording Permission Required" = "Screen Recording Permission Required";
+"TermSnap needs Screen Recording permission to capture screenshots. You can enable it in System Settings > Privacy & Security > Screen Recording." = "TermSnap needs Screen Recording permission to capture screenshots. You can enable it in System Settings > Privacy & Security > Screen Recording.";
+"Cancel" = "Cancel";
+"Failed to Capture Screenshot" = "Failed to Capture Screenshot";
+"OK" = "OK";
+
+"Press shortcut\u{2026}" = "Press shortcut\u{2026}";
+"None" = "None";
+"Record" = "Record";
+
+"Rectangle" = "Rectangle";
+"Ellipse" = "Ellipse";
+"Arrow" = "Arrow";
+"Line" = "Line";
+"Freehand" = "Freehand";
+"Text" = "Text";
+"Mosaic" = "Mosaic";
+
+"Red" = "Red";
+"Orange" = "Orange";
+"Yellow" = "Yellow";
+"Green" = "Green";
+"Cyan" = "Cyan";
+"Blue" = "Blue";
+"Purple" = "Purple";
+"White" = "White";
+"Black" = "Black";
+"Gray" = "Gray";
+
+"Cancel" = "Cancel";
+"Save" = "Save";
+"Copy to Clipboard" = "Copy to Clipboard";

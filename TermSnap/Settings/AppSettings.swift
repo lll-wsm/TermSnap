@@ -11,16 +11,12 @@ enum AppSettings {
         get { defaults.string(forKey: "saveDirectory") ?? "" }
         set { defaults.set(newValue, forKey: "saveDirectory") }
     }
-    static var shortcutFullScreen: String {
-        get { defaults.string(forKey: "shortcutFullScreen") ?? "" }
-        set { defaults.set(newValue, forKey: "shortcutFullScreen") }
+    static var shortcutCapture: String {
+        get { defaults.string(forKey: "shortcutCapture") ?? "" }
+        set { defaults.set(newValue, forKey: "shortcutCapture") }
     }
-    static var shortcutArea: String {
-        get { defaults.string(forKey: "shortcutArea") ?? "" }
-        set { defaults.set(newValue, forKey: "shortcutArea") }
-    }
-    static var shortcutWindow: String {
-        get { defaults.string(forKey: "shortcutWindow") ?? "" }
-        set { defaults.set(newValue, forKey: "shortcutWindow") }
+    static var showFinderIcon: Bool {
+        get { defaults.bool(forKey: "showFinderIcon") }
+        set { defaults.set(newValue, forKey: "showFinderIcon") }
     }
 }

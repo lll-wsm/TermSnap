@@ -23,13 +23,13 @@ enum AnnotationTool: String, CaseIterable {
 
     var tooltip: String {
         switch self {
-        case .rect: return "Rectangle"
-        case .ellipse: return "Ellipse"
-        case .arrow: return "Arrow"
-        case .line: return "Line"
-        case .pen: return "Freehand"
-        case .text: return "Text"
-        case .mosaic: return "Mosaic"
+        case .rect: return NSLocalizedString("Rectangle", comment: "")
+        case .ellipse: return NSLocalizedString("Ellipse", comment: "")
+        case .arrow: return NSLocalizedString("Arrow", comment: "")
+        case .line: return NSLocalizedString("Line", comment: "")
+        case .pen: return NSLocalizedString("Freehand", comment: "")
+        case .text: return NSLocalizedString("Text", comment: "")
+        case .mosaic: return NSLocalizedString("Mosaic", comment: "")
         }
     }
 }

@@ -7,20 +7,20 @@ class StatusBarController: NSObject {
 
     func setup() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-
-        if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "camera.viewfinder",
-                                   accessibilityDescription: "TermSnap")
+        if let button = statusItem?.button {
+            button.image = NSImage(named: "PhysalisStatusIcon")
+            button.image?.size = NSSize(width: 24, height: 24)
+            button.image?.isTemplate = true
         }
 
         let menu = NSMenu()
-        menu.addItem(makeItem("Take Screenshot", action: #selector(captureScreenshot), key: "x"))
-        menu.addItem(makeItem("Enable Finder Extension…", action: #selector(openExtensionGuide), key: ""))
+        menu.addItem(makeItem(NSLocalizedString("Take Screenshot", comment: ""), action: #selector(captureScreenshot), key: "x"))
+        menu.addItem(makeItem(NSLocalizedString("Enable Finder Extension\u{2026}", comment: ""), action: #selector(openExtensionGuide), key: ""))
         menu.addItem(.separator())
-        menu.addItem(makeItem("Settings…", action: #selector(openSettings), key: ","))
+        menu.addItem(makeItem(NSLocalizedString("Settings\u{2026}", comment: ""), action: #selector(openSettings), key: ","))
         menu.addItem(.separator())
         
-        let quitItem = NSMenuItem(title: "Quit TermSnap", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: NSLocalizedString("Quit TermSnap", comment: ""), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.addItem(quitItem)
         
         statusItem.menu = menu
@@ -63,7 +63,7 @@ class StatusBarController: NSObject {
         )
         window.center()
         window.contentView = NSHostingView(rootView: SettingsView())
-        window.title = "Settings"
+        window.title = NSLocalizedString("Settings", comment: "")
         window.isReleasedWhenClosed = false
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         
@@ -100,10 +100,10 @@ class StatusBarController: NSObject {
     private func presentScreenCapturePermissionAlert() {
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Screen Recording Permission Required"
-        alert.informativeText = "TermSnap needs Screen Recording permission to capture screenshots. You can enable it in System Settings > Privacy & Security > Screen Recording."
-        alert.addButton(withTitle: "Open System Settings")
-        alert.addButton(withTitle: "Cancel")
+        alert.messageText = NSLocalizedString("Screen Recording Permission Required", comment: "")
+        alert.informativeText = NSLocalizedString("TermSnap needs Screen Recording permission to capture screenshots. You can enable it in System Settings > Privacy & Security > Screen Recording.", comment: "")
+        alert.addButton(withTitle: NSLocalizedString("Open System Settings", comment: ""))
+        alert.addButton(withTitle: NSLocalizedString("Cancel", comment: ""))
 
         let response = alert.runModal()
         guard response == .alertFirstButtonReturn else { return }
@@ -116,9 +116,9 @@ class StatusBarController: NSObject {
     private func presentCaptureFailedAlert(reason: String) {
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Failed to Capture Screenshot"
+        alert.messageText = NSLocalizedString("Failed to Capture Screenshot", comment: "")
         alert.informativeText = reason
-        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: NSLocalizedString("OK", comment: ""))
         alert.runModal()
     }
 }

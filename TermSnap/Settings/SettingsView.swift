@@ -5,55 +5,57 @@ import Combine
 struct SettingsView: View {
     @State private var saveFormat = AppSettings.saveFormat
     @State private var saveDirectory = AppSettings.saveDirectory
-    @State private var shortcutFullScreen = AppSettings.shortcutFullScreen
-    @State private var shortcutArea = AppSettings.shortcutArea
-    @State private var shortcutWindow = AppSettings.shortcutWindow
+    @State private var shortcutCapture = AppSettings.shortcutCapture
+    @State private var showFinderIcon = AppSettings.showFinderIcon
 
     var body: some View {
         Form {
             Section {
-                Picker("Save Format", selection: $saveFormat) {
+                Picker(NSLocalizedString("Save Format", comment: ""), selection: $saveFormat) {
                     Text("PNG").tag("png")
                     Text("JPEG").tag("jpeg")
                 }
                 .pickerStyle(.segmented)
 
                 HStack(spacing: 8) {
-                    Text("Save to:")
+                    Text(NSLocalizedString("Save to:", comment: ""))
                     Text(directoryDisplayName)
                         .lineLimit(1)
                         .truncationMode(.middle)
                         .foregroundColor(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    Button("Choose…") { chooseDirectory() }
+                    Button(NSLocalizedString("Choose\u{2026}", comment: "")) { chooseDirectory() }
                         .fixedSize()
                 }
             } header: {
-                Label("Export", systemImage: "square.and.arrow.up")
+                Label(NSLocalizedString("Export", comment: ""), systemImage: "square.and.arrow.up")
             }
 
             Section {
-                ShortcutRow(label: "Full Screen", shortcut: $shortcutFullScreen)
-                ShortcutRow(label: "Area", shortcut: $shortcutArea)
-                ShortcutRow(label: "Window", shortcut: $shortcutWindow)
+                Toggle(NSLocalizedString("Show Icon in Context Menu", comment: ""), isOn: $showFinderIcon)
             } header: {
-                Label("Shortcuts", systemImage: "keyboard")
+                Label(NSLocalizedString("Finder Extension", comment: ""), systemImage: "macwindow")
+            }
+
+            Section {
+                ShortcutRow(label: NSLocalizedString("Capture", comment: ""), shortcut: $shortcutCapture)
+            } header: {
+                Label(NSLocalizedString("Shortcuts", comment: ""), systemImage: "keyboard")
             } footer: {
-                Text("Click Record then press the key combination you want to use.")
+                Text(NSLocalizedString("Click Record then press the key combination you want to use.", comment: ""))
                     .foregroundColor(.secondary)
             }
         }
         .padding()
-        .frame(width: 380, height: 300)
+        .frame(width: 380, height: 320)
         .onChange(of: saveFormat) { _, newValue in AppSettings.saveFormat = newValue }
         .onChange(of: saveDirectory) { _, newValue in AppSettings.saveDirectory = newValue }
-        .onChange(of: shortcutFullScreen) { _, newValue in AppSettings.shortcutFullScreen = newValue }
-        .onChange(of: shortcutArea) { _, newValue in AppSettings.shortcutArea = newValue }
-        .onChange(of: shortcutWindow) { _, newValue in AppSettings.shortcutWindow = newValue }
+        .onChange(of: shortcutCapture) { _, newValue in AppSettings.shortcutCapture = newValue }
+        .onChange(of: showFinderIcon) { _, newValue in AppSettings.showFinderIcon = newValue }
     }
 
     private var directoryDisplayName: String {
-        if saveDirectory.isEmpty { return "Desktop" }
+        if saveDirectory.isEmpty { return NSLocalizedString("Desktop", comment: "") }
         return URL(fileURLWithPath: saveDirectory).lastPathComponent
     }
 
@@ -61,7 +63,7 @@ struct SettingsView: View {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
-        panel.message = "Choose default save location for screenshots"
+        panel.message = NSLocalizedString("Choose default save location for screenshots", comment: "")
         panel.begin { response in
             if response == .OK, let url = panel.url {
                 saveDirectory = url.path
@@ -84,18 +86,18 @@ private struct ShortcutRow: View {
             Spacer()
 
             if isRecording {
-                Text("Press shortcut\u{2026}")
+                Text(NSLocalizedString("Press shortcut\u{2026}", comment: ""))
                     .foregroundColor(.secondary)
                     .frame(minWidth: 100, alignment: .trailing)
-                Button("Cancel") { cancelRecording() }
+                Button(NSLocalizedString("Cancel", comment: "")) { cancelRecording() }
                     .controlSize(.small)
             } else {
-                Text(shortcut.isEmpty ? "None" : shortcut)
+                Text(shortcut.isEmpty ? NSLocalizedString("None", comment: "") : shortcut)
                     .foregroundColor(.secondary)
                     .opacity(shortcut.isEmpty ? 0.5 : 1)
                     .font(.system(.body, design: .monospaced))
                     .frame(minWidth: 100, alignment: .trailing)
-                Button("Record") { startRecording() }
+                Button(NSLocalizedString("Record", comment: "")) { startRecording() }
                     .controlSize(.small)
             }
         }

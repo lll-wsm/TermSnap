@@ -1,0 +1,55 @@
+"Save Format" = "保存格式";
+"Save to:" = "保存到：";
+"Choose\u{2026}" = "选择\u{2026}";
+"Export" = "导出";
+"Show Icon in Context Menu" = "在右键菜单中显示图标";
+"Finder Extension" = "Finder 扩展";
+"Capture" = "截图";
+"Shortcuts" = "快捷键";
+"Click Record then press the key combination you want to use." = "点击“录制”然后按下您想要使用的组合键。";
+"Desktop" = "桌面";
+"Choose default save location for screenshots" = "为截图选择默认保存位置";
+
+"Take Screenshot" = "进行截图";
+"Enable Finder Extension\u{2026}" = "启用 Finder 扩展\u{2026}";
+"Settings\u{2026}" = "设置\u{2026}";
+"Quit TermSnap" = "退出 TermSnap";
+"Settings" = "设置";
+
+"Enable Finder Extension" = "启用 Finder 扩展";
+"To use \"Open Terminal Here\" in Finder's context menu, enable the TermSnap Finder Extension in System Settings." = "要在 Finder 的右键菜单中使用“在此处打开终端”，请在系统设置中启用 TermSnap Finder 扩展。";
+"Open System Settings" = "打开系统设置";
+"I've Enabled It" = "我已经启用了";
+
+"Screen Recording Permission Required" = "需要屏幕录制权限";
+"TermSnap needs Screen Recording permission to capture screenshots. You can enable it in System Settings > Privacy & Security > Screen Recording." = "TermSnap 需要屏幕录制权限才能进行截图。您可以在“系统设置 > 隐私与安全性 > 屏幕录制”中启用它。";
+"Cancel" = "取消";
+"Failed to Capture Screenshot" = "截图失败";
+"OK" = "确定";
+
+"Press shortcut\u{2026}" = "请按快捷键\u{2026}";
+"None" = "无";
+"Record" = "录制";
+
+"Rectangle" = "矩形";
+"Ellipse" = "椭圆";
+"Arrow" = "箭头";
+"Line" = "直线";
+"Freehand" = "涂鸦";
+"Text" = "文字";
+"Mosaic" = "马赛克";
+
+"Red" = "红色";
+"Orange" = "橙色";
+"Yellow" = "黄色";
+"Green" = "绿色";
+"Cyan" = "青色";
+"Blue" = "蓝色";
+"Purple" = "紫色";
+"White" = "白色";
+"Black" = "黑色";
+"Gray" = "灰色";
+
+"Cancel" = "取消";
+"Save" = "保存";
+"Copy to Clipboard" = "复制到剪贴板";

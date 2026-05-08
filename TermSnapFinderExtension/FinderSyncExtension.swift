@@ -17,10 +17,17 @@ class FinderSyncExtension: FIFinderSync {
 
     override func menu(for menuKind: FIMenuKind) -> NSMenu {
         let menu = NSMenu()
-        let item = NSMenuItem(title: "Open Terminal Here",
+        let title = NSLocalizedString("Open Terminal Here", comment: "Finder context menu item title")
+        let item = NSMenuItem(title: title,
                               action: #selector(openTerminalHere),
                               keyEquivalent: "")
-        item.image = NSImage(systemSymbolName: "terminal", accessibilityDescription: "Terminal")
+        
+        // Use App Group shared UserDefaults directly
+        if let defaults = UserDefaults(suiteName: "group.com.lll.TermSnap"),
+           defaults.bool(forKey: "showFinderIcon") {
+            item.image = NSImage(systemSymbolName: "terminal", accessibilityDescription: "Terminal")
+        }
+        
         menu.addItem(item)
         return menu
     }

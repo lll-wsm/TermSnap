@@ -84,7 +84,7 @@
 		46BF77012FA3300000ED6546 /* TermSnapFinderExtension */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				9BBD9419907F42EE83530B18 /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+				9BBD9419907F42EE83530B18 /* Exceptions for "TermSnapFinderExtension" folder in "TermSnapFinderExtension" target */,
 			);
 			path = TermSnapFinderExtension;
 			sourceTree = "<group>";
@@ -277,6 +277,7 @@
 			knownRegions = (
 				en,
 				Base,
+				"zh-Hans",
 			);
 			mainGroup = 46BF76BA2FA32B5200ED6546;
 			minimizedProjectReferenceProxies = 1;
@@ -699,7 +700,7 @@
 				ENABLE_APP_SANDBOX = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = TermSnapFinderExtension/Info.plist;
-					INFOPLIST_KEY_CFBundleDisplayName = TermSnap;
+				INFOPLIST_KEY_CFBundleDisplayName = TermSnap;
 				INFOPLIST_KEY_CFBundlePackageType = "XPC!";
 				INFOPLIST_KEY_LSMinimumSystemVersion = 13.0;
 				LD_RUNPATH_SEARCH_PATHS = (

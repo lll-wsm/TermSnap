@@ -179,7 +179,7 @@ class AnnotationToolbar: NSView {
             symbol: "xmark",
             tag: 400,
             action: #selector(cancelAction),
-            toolTip: "Cancel"
+            toolTip: NSLocalizedString("Cancel", comment: "")
         )
         stackView.addArrangedSubview(cancelBtn)
 
@@ -188,7 +188,7 @@ class AnnotationToolbar: NSView {
             symbol: "square.and.arrow.down",
             tag: 402,
             action: #selector(saveAction),
-            toolTip: "Save"
+            toolTip: NSLocalizedString("Save", comment: "")
         )
         stackView.addArrangedSubview(saveBtn)
 
@@ -197,7 +197,7 @@ class AnnotationToolbar: NSView {
             symbol: "checkmark",
             tag: 401,
             action: #selector(copyAction),
-            toolTip: "Copy to Clipboard"
+            toolTip: NSLocalizedString("Copy to Clipboard", comment: "")
         )
         stackView.addArrangedSubview(doneBtn)
     }
@@ -259,16 +259,16 @@ class AnnotationToolbar: NSView {
 
     private func colorName(_ color: NSColor) -> String {
         switch color {
-        case .red: return "Red"
-        case .orange: return "Orange"
-        case .yellow: return "Yellow"
-        case .green: return "Green"
-        case .cyan: return "Cyan"
-        case .blue: return "Blue"
-        case .purple: return "Purple"
-        case .white: return "White"
-        case .black: return "Black"
-        case NSColor(white: 0.5, alpha: 1): return "Gray"
+        case .red: return NSLocalizedString("Red", comment: "")
+        case .orange: return NSLocalizedString("Orange", comment: "")
+        case .yellow: return NSLocalizedString("Yellow", comment: "")
+        case .green: return NSLocalizedString("Green", comment: "")
+        case .cyan: return NSLocalizedString("Cyan", comment: "")
+        case .blue: return NSLocalizedString("Blue", comment: "")
+        case .purple: return NSLocalizedString("Purple", comment: "")
+        case .white: return NSLocalizedString("White", comment: "")
+        case .black: return NSLocalizedString("Black", comment: "")
+        case NSColor(white: 0.5, alpha: 1): return NSLocalizedString("Gray", comment: "")
         default: return ""
         }
     }

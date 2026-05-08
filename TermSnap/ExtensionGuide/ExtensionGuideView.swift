@@ -9,21 +9,21 @@ struct ExtensionGuideView: View {
                 .font(.system(size: 48))
                 .foregroundStyle(.secondary)
 
-            Text("Enable Finder Extension")
+            Text(NSLocalizedString("Enable Finder Extension", comment: ""))
                 .font(.headline)
 
-            Text("To use \"Open Terminal Here\" in Finder's context menu, enable the TermSnap Finder Extension in System Settings.")
+            Text(NSLocalizedString("To use \"Open Terminal Here\" in Finder's context menu, enable the TermSnap Finder Extension in System Settings.", comment: ""))
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
 
-            Button("Open System Settings") {
+            Button(NSLocalizedString("Open System Settings", comment: "")) {
                 if let url = URL(string: "x-apple.systempreferences:com.apple.Extensions-Settings.extension") {
                     NSWorkspace.shared.open(url)
                 }
             }
             .buttonStyle(.borderedProminent)
 
-            Button("I've Enabled It") {
+            Button(NSLocalizedString("I've Enabled It", comment: "")) {
                 dismiss()
             }
             .buttonStyle(.bordered)
