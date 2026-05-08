@@ -1,0 +1,56 @@
+# --- Xcode & Swift ---
+.DS_Store
+build/
+DerivedData/
+*.swp
+*.lock
+.DerivedData/
+.DerivedData-verify/
+*.moved-aside
+*.xcuserstate
+xcuserdata/
+DerivedData
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+
+# --- Swift Package Manager ---
+.build/
+.swiftpm/
+Packages/
+Package.resolved
+
+# --- macOS ---
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+*.lp
+
+# --- Gemini CLI / AI Tools ---
+.gemini/
+.claude/
+CLAUDE.md
+AGENTS.md
+GEMINI.md
+issue_fix_summary.md
+docs/superpowers/
+docs/plans/
+# Private memory - NEVER commit this
+memory/
+
+# --- Build & Packaging Scripts ---
+# build.sh is typically kept, but you might want to exclude local build outputs
+build/
+*.app
+*.appex
+*.dSYM
+
+# --- Other ---
+.env
+.env.*
+.temp
+tmp/
+*.log

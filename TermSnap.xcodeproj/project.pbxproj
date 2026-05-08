@@ -1,0 +1,800 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		46BF78A42FA35AC000ED6546 /* TermSnapFinderExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 46BF789F2FA35AC000ED6546 /* TermSnapFinderExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		46BF76D62FA32B5400ED6546 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 46BF76BB2FA32B5200ED6546 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 46BF76C22FA32B5200ED6546;
+			remoteInfo = TermSnap;
+		};
+		46BF76E02FA32B5400ED6546 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 46BF76BB2FA32B5200ED6546 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 46BF76C22FA32B5200ED6546;
+			remoteInfo = TermSnap;
+		};
+		46BF78A22FA35AC000ED6546 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 46BF76BB2FA32B5200ED6546 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 46BF77022FA3300000ED6546;
+			remoteInfo = TermSnapFinderExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		46BF78A32FA35AC000ED6546 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				46BF78A42FA35AC000ED6546 /* TermSnapFinderExtension.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		46BF76C32FA32B5200ED6546 /* TermSnap.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TermSnap.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		46BF76D52FA32B5400ED6546 /* TermSnapTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TermSnapTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		46BF76DF2FA32B5400ED6546 /* TermSnapUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TermSnapUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		46BF789F2FA35AC000ED6546 /* TermSnapFinderExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TermSnapFinderExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		9BBD9419907F42EE83530B18 /* Exceptions for "TermSnapFinderExtension" folder in "TermSnapFinderExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 46BF77022FA3300000ED6546 /* TermSnapFinderExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		46BF76C52FA32B5200ED6546 /* TermSnap */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = TermSnap;
+			sourceTree = "<group>";
+		};
+		46BF76D82FA32B5400ED6546 /* TermSnapTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = TermSnapTests;
+			sourceTree = "<group>";
+		};
+		46BF76E22FA32B5400ED6546 /* TermSnapUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = TermSnapUITests;
+			sourceTree = "<group>";
+		};
+		46BF77012FA3300000ED6546 /* TermSnapFinderExtension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				9BBD9419907F42EE83530B18 /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+			);
+			path = TermSnapFinderExtension;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		46BF76C02FA32B5200ED6546 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		46BF76D22FA32B5400ED6546 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		46BF76DC2FA32B5400ED6546 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		46BF77032FA3300000ED6546 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		46BF76BA2FA32B5200ED6546 = {
+			isa = PBXGroup;
+			children = (
+				46BF76C52FA32B5200ED6546 /* TermSnap */,
+				46BF76D82FA32B5400ED6546 /* TermSnapTests */,
+				46BF76E22FA32B5400ED6546 /* TermSnapUITests */,
+				46BF76C42FA32B5200ED6546 /* Products */,
+				46BF789E2FA35AC000ED6546 /* Recovered References */,
+			);
+			sourceTree = "<group>";
+		};
+		46BF76C42FA32B5200ED6546 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				46BF76C32FA32B5200ED6546 /* TermSnap.app */,
+				46BF76D52FA32B5400ED6546 /* TermSnapTests.xctest */,
+				46BF76DF2FA32B5400ED6546 /* TermSnapUITests.xctest */,
+				46BF789F2FA35AC000ED6546 /* TermSnapFinderExtension.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		46BF789E2FA35AC000ED6546 /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				46BF77012FA3300000ED6546 /* TermSnapFinderExtension */,
+			);
+			name = "Recovered References";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		46BF76C22FA32B5200ED6546 /* TermSnap */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 46BF76E92FA32B5400ED6546 /* Build configuration list for PBXNativeTarget "TermSnap" */;
+			buildPhases = (
+				46BF76BF2FA32B5200ED6546 /* Sources */,
+				46BF76C02FA32B5200ED6546 /* Frameworks */,
+				46BF76C12FA32B5200ED6546 /* Resources */,
+				46BF78A32FA35AC000ED6546 /* Embed App Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				46BF78A12FA35AC000ED6546 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				46BF76C52FA32B5200ED6546 /* TermSnap */,
+			);
+			name = TermSnap;
+			packageProductDependencies = (
+			);
+			productName = TermSnap;
+			productReference = 46BF76C32FA32B5200ED6546 /* TermSnap.app */;
+			productType = "com.apple.product-type.application";
+		};
+		46BF76D42FA32B5400ED6546 /* TermSnapTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 46BF76EC2FA32B5400ED6546 /* Build configuration list for PBXNativeTarget "TermSnapTests" */;
+			buildPhases = (
+				46BF76D12FA32B5400ED6546 /* Sources */,
+				46BF76D22FA32B5400ED6546 /* Frameworks */,
+				46BF76D32FA32B5400ED6546 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				46BF76D72FA32B5400ED6546 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				46BF76D82FA32B5400ED6546 /* TermSnapTests */,
+			);
+			name = TermSnapTests;
+			packageProductDependencies = (
+			);
+			productName = TermSnapTests;
+			productReference = 46BF76D52FA32B5400ED6546 /* TermSnapTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		46BF76DE2FA32B5400ED6546 /* TermSnapUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 46BF76EF2FA32B5400ED6546 /* Build configuration list for PBXNativeTarget "TermSnapUITests" */;
+			buildPhases = (
+				46BF76DB2FA32B5400ED6546 /* Sources */,
+				46BF76DC2FA32B5400ED6546 /* Frameworks */,
+				46BF76DD2FA32B5400ED6546 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				46BF76E12FA32B5400ED6546 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				46BF76E22FA32B5400ED6546 /* TermSnapUITests */,
+			);
+			name = TermSnapUITests;
+			packageProductDependencies = (
+			);
+			productName = TermSnapUITests;
+			productReference = 46BF76DF2FA32B5400ED6546 /* TermSnapUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		46BF77022FA3300000ED6546 /* TermSnapFinderExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 46BF77082FA3300000ED6546 /* Build configuration list for PBXNativeTarget "TermSnapFinderExtension" */;
+			buildPhases = (
+				46BF77052FA3300000ED6546 /* Sources */,
+				46BF77032FA3300000ED6546 /* Frameworks */,
+				46BF77042FA3300000ED6546 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				46BF77012FA3300000ED6546 /* TermSnapFinderExtension */,
+			);
+			name = TermSnapFinderExtension;
+			packageProductDependencies = (
+			);
+			productName = TermSnapFinderExtension;
+			productReference = 46BF789F2FA35AC000ED6546 /* TermSnapFinderExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		46BF76BB2FA32B5200ED6546 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2630;
+				LastUpgradeCheck = 2630;
+				TargetAttributes = {
+					46BF76C22FA32B5200ED6546 = {
+						CreatedOnToolsVersion = 26.3;
+					};
+					46BF76D42FA32B5400ED6546 = {
+						CreatedOnToolsVersion = 26.3;
+						TestTargetID = 46BF76C22FA32B5200ED6546;
+					};
+					46BF76DE2FA32B5400ED6546 = {
+						CreatedOnToolsVersion = 26.3;
+						TestTargetID = 46BF76C22FA32B5200ED6546;
+					};
+				};
+			};
+			buildConfigurationList = 46BF76BE2FA32B5200ED6546 /* Build configuration list for PBXProject "TermSnap" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 46BF76BA2FA32B5200ED6546;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 46BF76C42FA32B5200ED6546 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				46BF76C22FA32B5200ED6546 /* TermSnap */,
+				46BF76D42FA32B5400ED6546 /* TermSnapTests */,
+				46BF76DE2FA32B5400ED6546 /* TermSnapUITests */,
+				46BF77022FA3300000ED6546 /* TermSnapFinderExtension */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		46BF76C12FA32B5200ED6546 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		46BF76D32FA32B5400ED6546 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		46BF76DD2FA32B5400ED6546 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		46BF77042FA3300000ED6546 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		46BF76BF2FA32B5200ED6546 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		46BF76D12FA32B5400ED6546 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		46BF76DB2FA32B5400ED6546 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		46BF77052FA3300000ED6546 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		46BF76D72FA32B5400ED6546 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 46BF76C22FA32B5200ED6546 /* TermSnap */;
+			targetProxy = 46BF76D62FA32B5400ED6546 /* PBXContainerItemProxy */;
+		};
+		46BF76E12FA32B5400ED6546 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 46BF76C22FA32B5200ED6546 /* TermSnap */;
+			targetProxy = 46BF76E02FA32B5400ED6546 /* PBXContainerItemProxy */;
+		};
+		46BF78A12FA35AC000ED6546 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 46BF77022FA3300000ED6546 /* TermSnapFinderExtension */;
+			targetProxy = 46BF78A22FA35AC000ED6546 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		46BF76E72FA32B5400ED6546 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		46BF76E82FA32B5400ED6546 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		46BF76EA2FA32B5400ED6546 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = TermSnap/TermSnap.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = PKYN6PCZUU;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = TermSnap;
+				INFOPLIST_KEY_CFBundleName = TermSnap;
+				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "TermSnap needs permission to tell Terminal to open the selected folder.";
+				INFOPLIST_KEY_NSScreenCaptureUsageDescription = "TermSnap captures the screen only when you start a screenshot, so images can be annotated and exported.";
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 14.6;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lll.TermSnap;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				XROS_DEPLOYMENT_TARGET = 26.2;
+			};
+			name = Debug;
+		};
+		46BF76EB2FA32B5400ED6546 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = TermSnap/TermSnap.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = PKYN6PCZUU;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = TermSnap;
+				INFOPLIST_KEY_CFBundleName = TermSnap;
+				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "TermSnap needs permission to tell Terminal to open the selected folder.";
+				INFOPLIST_KEY_NSScreenCaptureUsageDescription = "TermSnap captures the screen only when you start a screenshot, so images can be annotated and exported.";
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 14.6;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lll.TermSnap;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				XROS_DEPLOYMENT_TARGET = 26.2;
+			};
+			name = Release;
+		};
+		46BF76ED2FA32B5400ED6546 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = PKYN6PCZUU;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MACOSX_DEPLOYMENT_TARGET = 15.7;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lll.TermSnapTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TermSnap.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TermSnap";
+				XROS_DEPLOYMENT_TARGET = 26.2;
+			};
+			name = Debug;
+		};
+		46BF76EE2FA32B5400ED6546 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = PKYN6PCZUU;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MACOSX_DEPLOYMENT_TARGET = 15.7;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lll.TermSnapTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TermSnap.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TermSnap";
+				XROS_DEPLOYMENT_TARGET = 26.2;
+			};
+			name = Release;
+		};
+		46BF76F02FA32B5400ED6546 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = PKYN6PCZUU;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MACOSX_DEPLOYMENT_TARGET = 15.7;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lll.TermSnapUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TEST_TARGET_NAME = TermSnap;
+				XROS_DEPLOYMENT_TARGET = 26.2;
+			};
+			name = Debug;
+		};
+		46BF76F12FA32B5400ED6546 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = PKYN6PCZUU;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MACOSX_DEPLOYMENT_TARGET = 15.7;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lll.TermSnapUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TEST_TARGET_NAME = TermSnap;
+				XROS_DEPLOYMENT_TARGET = 26.2;
+			};
+			name = Release;
+		};
+		46BF77062FA3300000ED6546 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = TermSnapFinderExtension/TermSnapFinderExtension.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = PKYN6PCZUU;
+				ENABLE_APP_SANDBOX = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TermSnapFinderExtension/Info.plist;
+					INFOPLIST_KEY_CFBundleDisplayName = TermSnap;
+				INFOPLIST_KEY_CFBundlePackageType = "XPC!";
+				INFOPLIST_KEY_LSMinimumSystemVersion = 13.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.6;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lll.TermSnap.FinderExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		46BF77072FA3300000ED6546 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = TermSnapFinderExtension/TermSnapFinderExtension.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = PKYN6PCZUU;
+				ENABLE_APP_SANDBOX = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TermSnapFinderExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = TermSnap;
+				INFOPLIST_KEY_CFBundlePackageType = "XPC!";
+				INFOPLIST_KEY_LSMinimumSystemVersion = 13.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.6;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lll.TermSnap.FinderExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		46BF76BE2FA32B5200ED6546 /* Build configuration list for PBXProject "TermSnap" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				46BF76E72FA32B5400ED6546 /* Debug */,
+				46BF76E82FA32B5400ED6546 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		46BF76E92FA32B5400ED6546 /* Build configuration list for PBXNativeTarget "TermSnap" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				46BF76EA2FA32B5400ED6546 /* Debug */,
+				46BF76EB2FA32B5400ED6546 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		46BF76EC2FA32B5400ED6546 /* Build configuration list for PBXNativeTarget "TermSnapTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				46BF76ED2FA32B5400ED6546 /* Debug */,
+				46BF76EE2FA32B5400ED6546 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		46BF76EF2FA32B5400ED6546 /* Build configuration list for PBXNativeTarget "TermSnapUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				46BF76F02FA32B5400ED6546 /* Debug */,
+				46BF76F12FA32B5400ED6546 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		46BF77082FA3300000ED6546 /* Build configuration list for PBXNativeTarget "TermSnapFinderExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				46BF77062FA3300000ED6546 /* Debug */,
+				46BF77072FA3300000ED6546 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 46BF76BB2FA32B5200ED6546 /* Project object */;
+}
