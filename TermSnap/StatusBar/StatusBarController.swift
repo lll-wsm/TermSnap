@@ -15,9 +15,9 @@ class StatusBarController: NSObject {
 
         let menu = NSMenu()
         menu.addItem(makeItem(NSLocalizedString("Take Screenshot", comment: ""), action: #selector(captureScreenshot), key: "x"))
-        menu.addItem(makeItem(NSLocalizedString("Enable Finder Extension\u{2026}", comment: ""), action: #selector(openExtensionGuide), key: ""))
+        menu.addItem(makeItem(NSLocalizedString("Enable Finder Extension...", comment: ""), action: #selector(openExtensionGuide), key: ""))
         menu.addItem(.separator())
-        menu.addItem(makeItem(NSLocalizedString("Settings\u{2026}", comment: ""), action: #selector(openSettings), key: ","))
+        menu.addItem(makeItem(NSLocalizedString("Settings...", comment: ""), action: #selector(openSettings), key: ","))
         menu.addItem(.separator())
         
         let quitItem = NSMenuItem(title: NSLocalizedString("Quit TermSnap", comment: ""), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")

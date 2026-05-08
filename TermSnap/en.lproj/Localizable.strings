@@ -1,6 +1,6 @@
 "Save Format" = "Save Format";
 "Save to:" = "Save to:";
-"Choose\u{2026}" = "Choose\u{2026}";
+"Choose..." = "Choose...";
 "Export" = "Export";
 "Show Icon in Context Menu" = "Show Icon in Context Menu";
 "Finder Extension" = "Finder Extension";
@@ -11,8 +11,8 @@
 "Choose default save location for screenshots" = "Choose default save location for screenshots";
 
 "Take Screenshot" = "Take Screenshot";
-"Enable Finder Extension\u{2026}" = "Enable Finder Extension\u{2026}";
-"Settings\u{2026}" = "Settings\u{2026}";
+"Enable Finder Extension..." = "Enable Finder Extension...";
+"Settings..." = "Settings...";
 "Quit TermSnap" = "Quit TermSnap";
 "Settings" = "Settings";
 
@@ -27,7 +27,7 @@
 "Failed to Capture Screenshot" = "Failed to Capture Screenshot";
 "OK" = "OK";
 
-"Press shortcut\u{2026}" = "Press shortcut\u{2026}";
+"Press shortcut..." = "Press shortcut...";
 "None" = "None";
 "Record" = "Record";
 
@@ -50,6 +50,5 @@
 "Black" = "Black";
 "Gray" = "Gray";
 
-"Cancel" = "Cancel";
 "Save" = "Save";
 "Copy to Clipboard" = "Copy to Clipboard";

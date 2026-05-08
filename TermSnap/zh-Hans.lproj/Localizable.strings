@@ -1,6 +1,6 @@
 "Save Format" = "保存格式";
 "Save to:" = "保存到：";
-"Choose\u{2026}" = "选择\u{2026}";
+"Choose" = "选择";
 "Export" = "导出";
 "Show Icon in Context Menu" = "在右键菜单中显示图标";
 "Finder Extension" = "Finder 扩展";
@@ -11,8 +11,8 @@
 "Choose default save location for screenshots" = "为截图选择默认保存位置";
 
 "Take Screenshot" = "进行截图";
-"Enable Finder Extension\u{2026}" = "启用 Finder 扩展\u{2026}";
-"Settings\u{2026}" = "设置\u{2026}";
+"Enable Finder Extension" = "启用 Finder 扩展";
+"Settings" = "设置";
 "Quit TermSnap" = "退出 TermSnap";
 "Settings" = "设置";
 
@@ -27,7 +27,7 @@
 "Failed to Capture Screenshot" = "截图失败";
 "OK" = "确定";
 
-"Press shortcut\u{2026}" = "请按快捷键\u{2026}";
+"Press shortcut" = "请按快捷键";
 "None" = "无";
 "Record" = "录制";
 
@@ -50,6 +50,5 @@
 "Black" = "黑色";
 "Gray" = "灰色";
 
-"Cancel" = "取消";
 "Save" = "保存";
 "Copy to Clipboard" = "复制到剪贴板";

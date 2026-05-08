@@ -24,7 +24,7 @@ struct SettingsView: View {
                         .truncationMode(.middle)
                         .foregroundColor(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    Button(NSLocalizedString("Choose\u{2026}", comment: "")) { chooseDirectory() }
+                    Button(NSLocalizedString("Choose...", comment: "")) { chooseDirectory() }
                         .fixedSize()
                 }
             } header: {
@@ -86,7 +86,7 @@ private struct ShortcutRow: View {
             Spacer()
 
             if isRecording {
-                Text(NSLocalizedString("Press shortcut\u{2026}", comment: ""))
+                Text(NSLocalizedString("Press shortcut...", comment: ""))
                     .foregroundColor(.secondary)
                     .frame(minWidth: 100, alignment: .trailing)
                 Button(NSLocalizedString("Cancel", comment: "")) { cancelRecording() }

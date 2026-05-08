@@ -17,7 +17,8 @@ class FinderSyncExtension: FIFinderSync {
 
     override func menu(for menuKind: FIMenuKind) -> NSMenu {
         let menu = NSMenu()
-        let title = NSLocalizedString("Open Terminal Here", comment: "Finder context menu item title")
+        let bundle = Bundle(for: type(of: self))
+        let title = bundle.localizedString(forKey: "Open Terminal Here", value: "Open Terminal Here...", table: nil)
         let item = NSMenuItem(title: title,
                               action: #selector(openTerminalHere),
                               keyEquivalent: "")
