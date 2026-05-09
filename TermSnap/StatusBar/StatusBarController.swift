@@ -48,6 +48,24 @@ class StatusBarController: NSObject {
     }
 
     @objc private func startScrollingScreenshot() {
+        // Enforce accessibility permissions for scrolling capture
+        guard AccessibilityEngine.isTrusted(prompt: true) else {
+            let alert = NSAlert()
+            alert.messageText = NSLocalizedString("Accessibility Permission Required", comment: "")
+            alert.informativeText = NSLocalizedString("Scrolling Screenshot requires Accessibility permissions to accurately identify scrollable areas. Please grant access in System Settings > Privacy & Security > Accessibility.", comment: "")
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: NSLocalizedString("OK", comment: ""))
+            alert.addButton(withTitle: NSLocalizedString("Open System Settings", comment: ""))
+            
+            let response = alert.runModal()
+            if response == .alertSecondButtonReturn {
+                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+                    NSWorkspace.shared.open(url)
+                }
+            }
+            return
+        }
+        
         Task {
             let result = await captureEngine.capture(.scrolling)
             switch result {
