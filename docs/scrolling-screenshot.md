@@ -57,17 +57,13 @@ CGImage Y ≈ virtualY （近似），故 finalize() 裁剪可直接用 minY/max
    - `currentOffset += dy` → 累加得到当前帧在虚拟文档中的位置
    - 过滤：`|dy| < 1.0`（噪声）或 `|dy| > frameHeight`（Vision 错误）→ 丢弃
 
-4. **绘制策略**（上下滚动不同）：
+4. **绘制策略**：
 
-   **向下滚动（dy > 0）**：只绘制帧的**底部 dy 像素**（新增内容）
-   - 如果绘制整个帧，每帧顶部的静态元素（如窗口标题栏）会覆盖前帧的内容
-   - 裁剪：`newFrame.cropping(to: 底部 dy 像素)`
-   - 绘制位置：`prevBottom = currentOffset + frameHeight - dy`（紧接已有内容底部）
-
-   **向上滚动（dy < 0）**：绘制**整个帧**
-   - 向上滚动时帧顶部是滚回缓冲区中的新终端内容
-   - 与已有内容的重叠区域是相同的终端内容（只是位移），覆盖无影响
-   - 绘制位置：`currentOffset`（新计算的位置）
+   **统一绘制策略**：不再区分滚动方向，始终绘制**整个帧**。
+   - 移除原有的 15% 盲区裁剪及仅绘制新增像素的复杂逻辑。
+   - 得益于精准的滚动区域识别（Accessibility API），捕获区域不再包含静态的窗口标题栏。
+   - 重叠区域利用 `.normal` 混合模式直接覆盖，确保拼接无缝。
+   - 绘制位置：`currentOffset`（由 Vision 计算出的当前帧虚拟文档位置）。
 
 5. **边界扩展**：
    - `minY = min(minY, currentOffset)`
@@ -79,12 +75,13 @@ CGImage Y ≈ virtualY （近似），故 finalize() 裁剪可直接用 minY/max
 
 ### OverlayView.swift — 滚动状态管理
 
-- `enterScrollingState(with:)`：将选中区域（Flipped 坐标）转换为 SCK Display 坐标
-  - `convertToSCK()`：OverlayView Flipped → AppKit Global → SCK Global Top-Left
-  - 各屏幕坐标空间转换通过 `screen.frame.maxY` 和 `primaryScreenHeight` 完成
-- 显示边框窗口标记捕获区域，显示 `ScrollingPreviewPanel` 实时预览
-- `finishScrolling()`：停止流，裁取最终图像，打开标注窗口
-- `cancel()`：停止流，关闭所有窗口
+- `mouseMoved(with:)`：集成了 `AccessibilityEngine.findScrollArea`，当鼠标悬停在窗口上时，自动识别并精准高亮其中的滚动区域。
+- `enterScrollingState(with:)`：将选中区域（Flipped 坐标）转换为 SCK Display 坐标。
+  - `convertToSCK()`：OverlayView Flipped → AppKit Global → SCK Global Top-Left。
+  - 调用 `ContentRectDetector.axContentRectInPoints` 进行最终区域精调，确保只捕获纯净的内容区。
+- 显示边框窗口标记捕获区域，显示 `ScrollingPreviewPanel` 实时预览。
+- `finishScrolling()`：停止流，裁取最终图像，打开标注窗口。
+- `cancel()`：停止流，关闭所有窗口。
 
 ### ScrollingPreviewPanel.swift — 实时预览面板
 
@@ -105,9 +102,9 @@ CGImage Y ≈ virtualY （近似），故 finalize() 裁剪可直接用 minY/max
 
 ## 已知限制
 
-1. **标题栏干扰**（向下滚动）：如果捕获区域包含窗口标题栏，向下滚动时每帧顶部的标题栏会覆盖前帧的终端内容。当前方案通过只绘制底部新增内容来规避。
+1. **Accessibility 权限**：精准识别滚动区域依赖系统的辅助功能权限。如果未授予权限，应用将回退到普通矩形选择。
 
-2. **向上滚动的标题栏**：如果捕获区域包含标题栏，向上滚动时帧顶部会包含标题栏而非终端内容。
+2. **非标准滚动控件**：对于未实现标准 Accessibility 协议的自定义滚动控件，识别可能不够精准。
 
 3. **缓冲区大小**：当前固定 20000px，超长文档可能截断。
 
