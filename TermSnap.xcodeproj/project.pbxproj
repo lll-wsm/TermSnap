@@ -507,6 +507,7 @@
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSAppleEventsUsageDescription = "TermSnap needs permission to tell Terminal to open the selected folder.";
 				INFOPLIST_KEY_NSScreenCaptureUsageDescription = "TermSnap captures the screen only when you start a screenshot, so images can be annotated and exported.";
+				INFOPLIST_KEY_NSAccessibilityUsageDescription = "TermSnap uses Accessibility to detect window content boundaries for accurate scrolling screenshots.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -556,6 +557,7 @@
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSAppleEventsUsageDescription = "TermSnap needs permission to tell Terminal to open the selected folder.";
 				INFOPLIST_KEY_NSScreenCaptureUsageDescription = "TermSnap captures the screen only when you start a screenshot, so images can be annotated and exported.";
+				INFOPLIST_KEY_NSAccessibilityUsageDescription = "TermSnap uses Accessibility to detect window content boundaries for accurate scrolling screenshots.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
