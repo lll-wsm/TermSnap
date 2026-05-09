@@ -37,22 +37,26 @@ class AccessibilityEngine {
                 let posErr = AXUIElementCopyAttributeValue(currentElement, kAXPositionAttribute as CFString, &positionRef)
                 let sizeErr = AXUIElementCopyAttributeValue(currentElement, kAXSizeAttribute as CFString, &sizeRef)
                 
-                if posErr == .success, sizeErr == .success {
+                if posErr == .success, sizeErr == .success,
+                   let posVal = positionRef as? AXValue,
+                   let sizeVal = sizeRef as? AXValue {
                     var axPosition = CGPoint.zero
                     var axSize = CGSize.zero
                     
-                    AXValueGetValue(positionRef as! AXValue, .cgPoint, &axPosition)
-                    AXValueGetValue(sizeRef as! AXValue, .cgSize, &axSize)
+                    let posSuccess = AXValueGetValue(posVal, .cgPoint, &axPosition)
+                    let sizeSuccess = AXValueGetValue(sizeVal, .cgSize, &axSize)
                     
-                    return CGRect(origin: axPosition, size: axSize)
+                    if posSuccess && sizeSuccess {
+                        return CGRect(origin: axPosition, size: axSize)
+                    }
                 }
             }
             
             // Move to parent
             var parent: CFTypeRef?
             if AXUIElementCopyAttributeValue(currentElement, kAXParentAttribute as CFString, &parent) == .success,
-               let parentElement = parent {
-                currentElement = parentElement as! AXUIElement
+               let parentElement = parent as? AXUIElement {
+                currentElement = parentElement
             } else {
                 break // No parent
             }
