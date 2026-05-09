@@ -56,7 +56,7 @@ class OverlayView: NSView {
 
     // Scrolling capture state
     private let stitchingEngine = StitchingEngine()
-    private var scrollingHUDPanel: NSPanel?
+    private var previewPanel: ScrollingPreviewPanel?
     private var borderWindow: NSWindow?
     private var captureTask: Task<Void, Never>?
 
@@ -269,40 +269,45 @@ class OverlayView: NSView {
 
     private func findTopmostWindow(at point: NSPoint) -> SCWindow? {
         let sckPoint = convertToSCK(point)
-        // Reversing the search order to ensure we pick the topmost window first.
-        // Some users report that the default order identifies the bottom-most window.
-        return windows.reversed().first { window in
+        return windows.first { window in
             window.frame.contains(sckPoint)
         }
     }
 
     private func convertToSCK(_ point: NSPoint) -> NSPoint {
-        // Since both our view and SCK use top-left origin (relative to display),
-        // we only need to add the screen origin to get global SCK coordinates.
-        let globalX = screen.frame.origin.x + point.x
-        // In SCK, Y increases downwards from the top of the primary screen.
-        // AppKit global coordinates have Y increasing upwards from primary screen bottom.
-        // But our view points are local to this window (screen frame).
-        // For SCK, we need global top-left.
         let primaryScreenHeight = NSScreen.screens.first?.frame.height ?? 1080
-        let appKitGlobalY = screen.frame.origin.y + (screen.frame.height - point.y)
+        
+        // AppKit Global Point (Bottom-Left origin)
+        // For flipped view: local Y increases down from top edge.
+        // screen.frame.maxY is the top edge in AppKit global space.
+        let appKitGlobalX = screen.frame.origin.x + point.x
+        let appKitGlobalY = screen.frame.maxY - point.y
+        
+        // SCK Global Point (Top-Left origin)
+        // SCK Y = distance from top of primary screen.
+        let sckGlobalX = appKitGlobalX
         let sckGlobalY = primaryScreenHeight - appKitGlobalY
         
-        return NSPoint(x: globalX, y: sckGlobalY)
+        return NSPoint(x: sckGlobalX, y: sckGlobalY)
     }
 
     private func convertToSCK(_ rect: NSRect) -> CGRect {
+        // rect.origin is Top-Left in flipped coordinate system
         let topLeft = convertToSCK(rect.origin)
         return CGRect(x: topLeft.x, y: topLeft.y, width: rect.width, height: rect.height)
     }
 
     private func convertFromSCK(_ rect: CGRect) -> NSRect {
-        // Convert global SCK rect (top-left) to local view rect (top-left, since flipped)
-        let localX = rect.origin.x - screen.frame.origin.x
-        
         let primaryScreenHeight = NSScreen.screens.first?.frame.height ?? 1080
-        let appKitGlobalY = primaryScreenHeight - rect.origin.y
-        let localY = screen.frame.height - (appKitGlobalY - screen.frame.origin.y)
+        
+        // SCK Global Top-Left (rect.origin) to AppKit Global Bottom-Left
+        let appKitGlobalX = rect.origin.x
+        let appKitGlobalBottomY = primaryScreenHeight - (rect.origin.y + rect.height)
+        
+        // AppKit Global to Local Flipped View (Top-Left)
+        // local Y = screen.frame.maxY - (appKitGlobalBottomY + rect.height)
+        let localX = appKitGlobalX - screen.frame.origin.x
+        let localY = screen.frame.maxY - (appKitGlobalBottomY + rect.height)
         
         return NSRect(x: localX, y: localY, width: rect.width, height: rect.height)
     }
@@ -492,33 +497,31 @@ class OverlayView: NSView {
         currentRect = rect
         stitchingEngine.reset()
 
-        // Capture the display rect in SCK coords before hiding the overlay
+        // Capture the display rect in SCK coords (Top-Left global)
         let sckRect = convertToSCK(rect)
 
-        // sourceRect expects display-relative coordinates (top-left origin).
-        // display.frame is in AppKit coordinates (bottom-left origin).
-        // Convert display.frame.origin to SCK (top-left origin) for correct math.
-        let primaryScreenHeight = NSScreen.screens.first?.frame.height ?? 1080
-        let displayTopY_SCK = primaryScreenHeight - (display.frame.origin.y + display.frame.height)
-        
-        // Rect relative to the display top-left
+        // SCDisplay.frame is also in Top-Left global coordinates.
+        // We need coordinates relative to the display's own top-left.
         let localDisplayRect = CGRect(
             x: sckRect.origin.x - display.frame.origin.x,
-            y: sckRect.origin.y - displayTopY_SCK,
+            y: sckRect.origin.y - display.frame.origin.y,
             width: sckRect.width,
             height: sckRect.height
         )
         
-        NSLog("TermSnap: Scrolling area local=\(rect), displayRect=\(localDisplayRect)")
+        NSLog("TermSnap: Scrolling start. DisplayOrigin=\(display.frame.origin), sckRect=\(sckRect), local=\(localDisplayRect)")
 
         // Hide the overlay so user can scroll content naturally
         window?.orderOut(nil)
 
         // Show a border window around the capture area
         showBorderWindow(for: rect)
-
-        // Show a small floating HUD panel
-        showScrollingHUDPanel(for: rect)
+        
+        // Show a preview panel
+        let preview = ScrollingPreviewPanel(screen: screen)
+        preview.updatePosition(relativeTo: rect, on: screen)
+        preview.orderFront(nil)
+        previewPanel = preview
 
         captureTask = Task {
             guard let engine = captureEngine else {
@@ -528,15 +531,19 @@ class OverlayView: NSView {
 
             do {
                 NSLog("TermSnap: Starting stream")
-                let stream = try await engine.startStream(display: display, area: localDisplayRect)
-                NSLog("TermSnap: Stream started, waiting for frames")
+                // Exclude our own UI from the capture stream
+                let excludeWindows = [previewPanel, borderWindow].compactMap { $0 }
+                let stream = try await engine.startStream(display: display, area: localDisplayRect, excluding: excludeWindows)
+                
+                NSLog("TermSnap: Stream started, waiting for frames, localRect=\(localDisplayRect)")
                 var frameCount = 0
+                
                 for await frame in stream {
                     if state != .scrolling { break }
                     frameCount += 1
-                    let result = await stitchingEngine.addFrame(frame)
-                    if frameCount <= 3 {
-                        NSLog("TermSnap: Frame \(frameCount) size=\(frame.width)x\(frame.height), stitched=\(result != nil)")
+                    
+                    if let result = await stitchingEngine.addFrame(frame) {
+                        previewPanel?.updateImage(result, lastDy: stitchingEngine.lastDy, frameCount: frameCount, area: localDisplayRect, rawFrame: frame)
                     }
                 }
                 NSLog("TermSnap: Stream ended after \(frameCount) frames")
@@ -577,58 +584,9 @@ class OverlayView: NSView {
         borderWindow = borderWin
     }
 
-    private func showScrollingHUDPanel(for rect: NSRect) {
-        let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 280, height: 70),
-            styleMask: [.titled, .nonactivatingPanel],
-            backing: .buffered,
-            defer: false
-        )
-        panel.title = "TermSnap"
-        panel.isFloatingPanel = true
-        panel.level = .floating
-        panel.isOpaque = false
-        panel.backgroundColor = NSColor(white: 0.1, alpha: 0.9)
-        panel.hasShadow = true
-        panel.isReleasedWhenClosed = false
-        panel.hidesOnDeactivate = false
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        panel.ignoresMouseEvents = false
-
-        // Position near the top-center of the screen
-        let screenRect = screen.visibleFrame
-        let panelX = screenRect.midX - 140
-        let panelY = screenRect.maxY - 90
-        panel.setFrameOrigin(NSPoint(x: panelX, y: panelY))
-
-        let contentView = panel.contentView!
-
-        let label = NSTextField(labelWithString: NSLocalizedString("Scrolling Press Enter to finish", comment: ""))
-        label.font = .systemFont(ofSize: 14, weight: .medium)
-        label.textColor = .white
-        label.backgroundColor = .clear
-        label.alignment = .center
-        label.frame = NSRect(x: 10, y: 36, width: 260, height: 20)
-        contentView.addSubview(label)
-
-        let doneBtn = NSButton(frame: NSRect(x: 90, y: 6, width: 100, height: 26))
-        doneBtn.title = NSLocalizedString("Done", comment: "")
-        doneBtn.bezelStyle = .rounded
-        doneBtn.target = self
-        doneBtn.action = #selector(finishScrollingAction)
-        contentView.addSubview(doneBtn)
-
-        panel.orderFront(nil)
-        scrollingHUDPanel = panel
-    }
-
-    @objc private func finishScrollingAction() {
-        finishScrolling()
-    }
-
     func finishScrolling() {
-        scrollingHUDPanel?.orderOut(nil)
-        scrollingHUDPanel = nil
+        previewPanel?.orderOut(nil)
+        previewPanel = nil
         borderWindow?.orderOut(nil)
         borderWindow = nil
 
@@ -689,8 +647,8 @@ class OverlayView: NSView {
         if state == .scrolling {
             captureTask?.cancel()
             captureTask = nil
-            scrollingHUDPanel?.orderOut(nil)
-            scrollingHUDPanel = nil
+            previewPanel?.orderOut(nil)
+            previewPanel = nil
             borderWindow?.orderOut(nil)
             borderWindow = nil
             Task {

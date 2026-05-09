@@ -30,12 +30,13 @@ class AnnotationToolbar: NSView {
         addSeparator()
         addActionButtons()
 
+        // Calculate size based on stack view content
         let fittingWidth = stackView.fittingSize.width
-        let minWidth: CGFloat = 750
-        let contentWidth = fittingWidth > 0 ? ceil(fittingWidth) : minWidth
-        let clampedWidth = min(contentWidth, parentBounds.width - 40)
-        let barX = (parentBounds.width - clampedWidth) / 2
-        frame = NSRect(x: barX, y: 20, width: clampedWidth, height: Self.barHeight)
+        let minWidth: CGFloat = 720
+        let contentWidth = max(minWidth, ceil(fittingWidth))
+        let clampedWidth = min(contentWidth, parentBounds.width - 20)
+        
+        self.frame = NSRect(x: 0, y: 0, width: clampedWidth, height: Self.barHeight)
     }
 
     required init?(coder: NSCoder) { fatalError() }

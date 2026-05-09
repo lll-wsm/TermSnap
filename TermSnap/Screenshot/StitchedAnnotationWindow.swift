@@ -15,9 +15,13 @@ class StitchedAnnotationWindow: NSWindow {
         self.stitchedImage = image
 
         let screenRect = screen.visibleFrame
-        // Window size: fit to screen width, up to 90% of screen height
-        let winWidth = min(image.size.width + 40, screenRect.width - 40)
+        
+        // Window width: 1:1 with image width, but ensure it fits on screen and fits toolbar (min 850)
+        let winWidth = max(850, min(image.size.width, screenRect.width - 40))
+        
+        // Window height: Image height + Toolbar space (approx 80), up to 90% of screen height
         let winHeight = min(image.size.height + 100, screenRect.height * 0.9)
+        
         let winRect = NSRect(x: screenRect.midX - winWidth / 2,
                              y: screenRect.midY - winHeight / 2,
                              width: winWidth, height: winHeight)
@@ -32,18 +36,21 @@ class StitchedAnnotationWindow: NSWindow {
         self.titleVisibility = .hidden
         self.isReleasedWhenClosed = false
         self.level = .floating
-        self.minSize = NSSize(width: 400, height: 300)
+        self.minSize = NSSize(width: 850, height: 400)
 
         setupScrollView(with: winRect.size)
         setupToolbar(with: winRect.size)
     }
 
     private func setupScrollView(with parentSize: NSSize) {
-        scrollView = NSScrollView(frame: NSRect(x: 0, y: 0, width: parentSize.width, height: parentSize.height - 56))
+        // Leave 80 pixels at the bottom for the toolbar area
+        let toolbarAreaHeight: CGFloat = 80
+        scrollView = NSScrollView(frame: NSRect(x: 0, y: toolbarAreaHeight, width: parentSize.width, height: parentSize.height - toolbarAreaHeight))
         scrollView.hasVerticalScroller = true
         scrollView.hasHorizontalScroller = true
         scrollView.autohidesScrollers = true
         scrollView.borderType = .noBorder
+        scrollView.autoresizingMask = [.width, .height]
 
         imageView = NSImageView(frame: NSRect(origin: .zero, size: stitchedImage.size))
         imageView.image = stitchedImage
@@ -63,17 +70,21 @@ class StitchedAnnotationWindow: NSWindow {
 
     private func setupToolbar(with parentSize: NSSize) {
         let imageRect = NSRect(origin: .zero, size: stitchedImage.size)
+        // Ensure parentBounds in toolbar is at least 850 so buttons are not clipped
+        let toolbarParentWidth = max(850, parentSize.width)
         let toolbar = AnnotationToolbar(
             annotationView: annotationView,
             selectedRect: imageRect,
-            parentBounds: imageRect
+            parentBounds: NSRect(x: 0, y: 0, width: toolbarParentWidth, height: parentSize.height)
         )
         toolbar.onCopy = { [weak self] in self?.copyToClipboard() }
         toolbar.onSave = { [weak self] in self?.saveToFile() }
         toolbar.onCancel = { [weak self] in self?.closeWindow() }
 
-        // Position toolbar at the bottom of the window
-        toolbar.setFrameOrigin(NSPoint(x: (parentSize.width - toolbar.frame.width) / 2, y: 8))
+        // Manually center the toolbar at the bottom area (outside scrollview)
+        let toolbarWidth = toolbar.frame.width
+        toolbar.setFrameOrigin(NSPoint(x: (parentSize.width - toolbarWidth) / 2, y: 18))
+        
         contentView?.addSubview(toolbar)
         toolbarView = toolbar
     }

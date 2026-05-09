@@ -3,102 +3,129 @@ import CoreGraphics
 import AppKit
 
 class StitchingEngine {
-    private var baseImage: CGImage?
     private var lastFrame: CGImage?
-    private let visionQueue = DispatchQueue(label: "com.lll.TermSnap.vision", qos: .userInteractive)
     
-    // Total vertical offset from the top of the base image
-    private var currentTotalHeight: CGFloat = 0
+    // Persistent buffer context
+    private var bufferContext: CGContext?
+    private let bufferMaxHeight: Int = 20000
+    
+    // Virtual document space
+    private let initialY: Double = 10000 
+    private var minY: Double = 10000
+    private var maxY: Double = 10000
+    private var currentOffset: Double = 10000
+    
+    var lastDy: Double = 0
+    private var frameCount = 0
 
     func reset() {
-        baseImage = nil
+        bufferContext = nil
         lastFrame = nil
-        currentTotalHeight = 0
+        minY = initialY
+        maxY = initialY
+        currentOffset = initialY
+        lastDy = 0
+        frameCount = 0
     }
 
-    /// Processes a new frame and appends it to the stitched result.
-    /// Returns the updated stitched image.
+    /// Processes a new frame. Returns the used portion of the large buffer.
     func addFrame(_ newFrame: CGImage) async -> CGImage? {
         guard let last = lastFrame else {
-            baseImage = newFrame
+            setupBuffer(width: newFrame.width, height: bufferMaxHeight)
+            drawInBuffer(newFrame, at: initialY, height: Double(newFrame.height))
+            
             lastFrame = newFrame
-            currentTotalHeight = CGFloat(newFrame.height)
-            NSLog("TermSnap: StitchingEngine first frame \(newFrame.width)x\(newFrame.height)")
-            return newFrame
+            minY = initialY
+            maxY = initialY + Double(newFrame.height)
+            currentOffset = initialY
+            return finalize()
         }
 
+        let handler = VNImageRequestHandler(cgImage: last, options: [:])
         let registrationRequest = VNTranslationalImageRegistrationRequest(targetedCGImage: newFrame)
-        let handler = VNSequenceRequestHandler()
-
+        
         do {
-            try handler.perform([registrationRequest], on: last)
-
+            try handler.perform([registrationRequest])
             guard let observation = registrationRequest.results?.first as? VNImageTranslationAlignmentObservation else {
-                lastFrame = newFrame
-                NSLog("TermSnap: StitchingEngine no alignment observation")
-                return baseImage
+                return finalize()
             }
 
             let transform = observation.alignmentTransform
-            // Downward scroll results in negative ty in Y-up coordinate system (Vision/CoreGraphics).
-            // We want positive dy for the amount of new content revealed at the bottom.
-            let dy = -transform.ty * CGFloat(newFrame.height)
-            NSLog("TermSnap: StitchingEngine dy=\(dy) transform.ty=\(transform.ty)")
+            // Document says: transform.ty is ALREADY in pixels.
+            // dy = -transform.ty (dy > 0 means downward scroll)
+            let dy = -Double(transform.ty)
+            self.lastDy = dy
+            frameCount += 1
 
-            if dy <= 1.0 {
+            // Noise filter
+            if abs(dy) < 1.0 {
+                return finalize()
+            }
+            // Error filter
+            if abs(dy) > Double(newFrame.height) {
                 lastFrame = newFrame
-                return baseImage
+                return finalize()
             }
 
-            if let stitched = stitch(base: baseImage!, newFrame: newFrame, dy: dy) {
-                baseImage = stitched
-                lastFrame = newFrame
-                return stitched
+            currentOffset += dy
+            let frameH = Double(newFrame.height)
+            let frameW = Double(newFrame.width)
+
+            if dy > 0 {
+                // DOWNWARD SCROLL: Only draw the bottom 'dy' pixels (new content)
+                let cropRect = CGRect(x: 0, y: frameH - dy, width: frameW, height: dy)
+                if let slice = newFrame.cropping(to: cropRect) {
+                    // Draw at the bottom of the previous content
+                    let virtualY = currentOffset + frameH - dy
+                    drawInBuffer(slice, at: virtualY, height: dy)
+                }
+            } else {
+                // UPWARD SCROLL: Draw the entire frame
+                drawInBuffer(newFrame, at: currentOffset, height: frameH)
             }
+            
+            // Update bounds
+            minY = min(minY, currentOffset)
+            maxY = max(maxY, currentOffset + frameH)
+            
+            lastFrame = newFrame
+            return finalize()
 
         } catch {
             NSLog("TermSnap: Vision error: \(error)")
         }
 
-        return baseImage
+        return finalize()
     }
 
-    private func stitch(base: CGImage, newFrame: CGImage, dy: CGFloat) -> CGImage? {
-        let newContentHeight = Int(round(dy))
-        guard newContentHeight > 0 else { return base }
-
-        let totalWidth = base.width
-        let totalHeight = base.height + newContentHeight
-        
-        guard let ctx = CGContext(
+    private func setupBuffer(width: Int, height: Int) {
+        bufferContext = CGContext(
             data: nil,
-            width: totalWidth, height: totalHeight,
+            width: width, height: height,
             bitsPerComponent: 8,
-            bytesPerRow: totalWidth * 4,
+            bytesPerRow: width * 4,
             space: CGColorSpaceCreateDeviceRGB(),
             bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
-        ) else { return nil }
-
-        // CoreGraphics coordinates: (0,0) is bottom-left
-        
-        // 1. Draw the base image at the top
-        // In bottom-left origin, top is at y = newContentHeight
-        ctx.draw(base, in: CGRect(x: 0, y: CGFloat(newContentHeight), width: CGFloat(totalWidth), height: CGFloat(base.height)))
-
-        // 2. Draw the new slice at the bottom
-        // We need the bottom-most pixels of the new frame.
-        // In CGImage.cropping, (0,0) is TOP-left.
-        let cropRect = CGRect(x: 0, y: CGFloat(newFrame.height) - CGFloat(newContentHeight), 
-                              width: CGFloat(newFrame.width), height: CGFloat(newContentHeight))
-        
-        if let slice = newFrame.cropping(to: cropRect) {
-            ctx.draw(slice, in: CGRect(x: 0, y: 0, width: CGFloat(totalWidth), height: CGFloat(newContentHeight)))
-        }
-
-        return ctx.makeImage()
+        )
+        bufferContext?.setFillColor(NSColor.white.cgColor)
+        bufferContext?.fill(CGRect(x: 0, y: 0, width: width, height: height))
     }
-    
+
+    private func drawInBuffer(_ image: CGImage, at virtualY: Double, height: Double) {
+        guard let ctx = bufferContext else { return }
+        // destY = bufferMaxHeight - virtualY - imageHeight
+        let destY = Double(bufferMaxHeight) - virtualY - height
+        ctx.setBlendMode(.normal)
+        ctx.draw(image, in: CGRect(x: 0, y: CGFloat(destY), width: CGFloat(image.width), height: CGFloat(height)))
+    }
+
     func finalize() -> CGImage? {
-        return baseImage
+        guard let fullBuffer = bufferContext?.makeImage() else { return nil }
+        let usedHeight = Int(ceil(maxY - minY))
+        guard usedHeight > 0 else { return nil }
+        
+        // cropRect y = minY (Top-Left space)
+        let cropRect = CGRect(x: 0, y: CGFloat(minY), width: CGFloat(fullBuffer.width), height: CGFloat(usedHeight))
+        return fullBuffer.cropping(to: cropRect)
     }
 }

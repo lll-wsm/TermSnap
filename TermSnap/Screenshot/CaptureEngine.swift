@@ -51,21 +51,32 @@ class CaptureEngine {
         }
     }
 
-    func startStream(display: SCDisplay, area: CGRect) async throws -> AsyncStream<CGImage> {
+    func startStream(display: SCDisplay, area: CGRect, excluding: [NSWindow] = []) async throws -> AsyncStream<CGImage> {
         let output = StreamOutput()
         let stream = AsyncStream<CGImage> { continuation in
             output.continuation = continuation
         }
 
-        let filter = SCContentFilter(display: display, excludingWindows: [])
+        // Convert NSWindows to SCWindows for exclusion
+        let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+        let excludeSCWindows = content.windows.filter { scWindow in
+            excluding.contains { nsWindow in
+                scWindow.windowID == CGWindowID(nsWindow.windowNumber)
+            }
+        }
+
+        let filter = SCContentFilter(display: display, excludingWindows: excludeSCWindows)
         let config = SCStreamConfiguration()
         
-        let screen = NSScreen.screens.first { $0.frame.origin.x == display.frame.origin.x } ?? NSScreen.main!
+        let screen = NSScreen.screens.first { 
+            ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID) == display.displayID 
+        } ?? NSScreen.main!
         let scale = screen.backingScaleFactor
         
         config.sourceRect = area
         config.width = Int(area.width * scale)
         config.height = Int(area.height * scale)
+        config.destinationRect = CGRect(x: 0, y: 0, width: CGFloat(config.width), height: CGFloat(config.height))
         config.minimumFrameInterval = CMTime(value: 1, timescale: 10) // 10 FPS
         config.queueDepth = 5
         config.pixelFormat = kCVPixelFormatType_32BGRA
