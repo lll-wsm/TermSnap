@@ -56,7 +56,7 @@ class StitchingEngine {
             }
 
             let transform = observation.alignmentTransform
-            let rawDy = Double(transform.ty)
+            let rawDy = -Double(transform.ty)
             self.lastDy = rawDy
             self.accumulatedDy += rawDy
             frameCount += 1
@@ -72,12 +72,22 @@ class StitchingEngine {
 
             accumulatedDy -= Double(dy)
             currentOffset += Double(dy)
-            
-            // Draw the FULL frame at the new offset. 
-            // Overlapping content will be overwritten (normal blend mode), ensuring perfect stitching.
-            drawInBuffer(newFrame, at: currentOffset, height: frameH)
-            
-            // Update the tracked boundaries of the stitched image
+
+            if dy > 0 {
+                // Scroll DOWN: new frame sits higher in the document. Drawing the full
+                // frame would place its title bar over previous-frame content, so only
+                // draw the non-overlapping bottom portion.
+                let extractH = min(dy, newFrame.height)
+                let srcY = newFrame.height - extractH
+                if let slice = newFrame.cropping(to: CGRect(x: 0, y: srcY, width: Int(frameW), height: extractH)) {
+                    drawInBuffer(slice, at: currentOffset + Double(srcY), height: Double(extractH))
+                }
+            } else {
+                // Scroll UP: new frame sits lower in the document. Its title bar is
+                // below the previous frame and cannot overwrite it. Full frame is safe.
+                drawInBuffer(newFrame, at: currentOffset, height: frameH)
+            }
+
             minY = min(minY, currentOffset)
             maxY = max(maxY, currentOffset + frameH)
             
