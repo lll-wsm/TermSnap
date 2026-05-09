@@ -47,7 +47,7 @@ class StitchingEngine {
 
         let handler = VNImageRequestHandler(cgImage: last, options: [:])
         let registrationRequest = VNTranslationalImageRegistrationRequest(targetedCGImage: newFrame)
-        registrationRequest.regionOfInterest = CGRect(x: 0.1, y: 0.1, width: 0.8, height: 0.8)
+        // No regionOfInterest - use full frame for maximum precision
 
         do {
             try handler.perform([registrationRequest])
@@ -73,16 +73,13 @@ class StitchingEngine {
             accumulatedDy -= Double(dy)
             currentOffset += Double(dy)
             
-            if dy > 0 {
-                let sliceRect = CGRect(x: 0, y: Int(frameH) - dy, width: Int(frameW), height: dy)
-                if let slice = newFrame.cropping(to: sliceRect) {
-                    drawInBuffer(slice, at: maxY, height: Double(dy))
-                    maxY += Double(dy)
-                }
-            } else {
-                minY += Double(dy) 
-                drawInBuffer(newFrame, at: minY, height: frameH)
-            }
+            // Draw the FULL frame at the new offset. 
+            // Overlapping content will be overwritten (normal blend mode), ensuring perfect stitching.
+            drawInBuffer(newFrame, at: currentOffset, height: frameH)
+            
+            // Update the tracked boundaries of the stitched image
+            minY = min(minY, currentOffset)
+            maxY = max(maxY, currentOffset + frameH)
             
             lastFrame = newFrame
             return finalize()
