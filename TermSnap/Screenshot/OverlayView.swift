@@ -545,17 +545,15 @@ class OverlayView: NSView {
         NSLog("TermSnap: Scrolling start. DisplayOrigin=\(display.frame.origin), sckRect=\(sckRect), local=\(localDisplayRect)")
 
         // Try AX-based content area detection before streaming
+        var captureArea = localDisplayRect
         let targetSCWindow = hoveredWindow ?? findSCWindow(for: rect)
         if let scWin = targetSCWindow {
-            if let axRect = ContentRectDetector.axContentRect(
-                for: scWin, display: display,
-                sourceRect: localDisplayRect,
-                scale: screen.backingScaleFactor
-            ) {
-                stitchingEngine.setContentRect(top: axRect.0, bottom: axRect.1, left: axRect.2, right: axRect.3)
-                NSLog("TermSnap: AX content rect t=\(axRect.0) b=\(axRect.1) l=\(axRect.2) r=\(axRect.3)")
+            if let axRect = ContentRectDetector.axContentRectInPoints(for: scWin, display: display) {
+                // Ensure the AX rect is within the user's selection
+                captureArea = axRect.intersection(localDisplayRect)
+                NSLog("TermSnap: AX capture area t=\(captureArea)")
             } else {
-                NSLog("TermSnap: AX detection failed, will fall back to pixel detection")
+                NSLog("TermSnap: AX detection failed, using selection rect")
             }
         }
 
@@ -581,9 +579,9 @@ class OverlayView: NSView {
                 NSLog("TermSnap: Starting stream")
                 // Exclude our own UI from the capture stream
                 let excludeWindows = [previewPanel, borderWindow].compactMap { $0 }
-                let stream = try await engine.startStream(display: display, area: localDisplayRect, excluding: excludeWindows)
+                let stream = try await engine.startStream(display: display, area: captureArea, excluding: excludeWindows)
                 
-                NSLog("TermSnap: Stream started, waiting for frames, localRect=\(localDisplayRect)")
+                NSLog("TermSnap: Stream started, waiting for frames, captureArea=\(captureArea)")
                 var frameCount = 0
                 
                 for await frame in stream {
@@ -591,7 +589,7 @@ class OverlayView: NSView {
                     frameCount += 1
                     
                     if let result = await stitchingEngine.addFrame(frame) {
-                        previewPanel?.updateImage(result, lastDy: stitchingEngine.lastDy, frameCount: frameCount, area: localDisplayRect, rawFrame: frame)
+                        previewPanel?.updateImage(result, lastDy: stitchingEngine.lastDy, frameCount: frameCount, area: captureArea, rawFrame: frame)
                     }
                 }
                 NSLog("TermSnap: Stream ended after \(frameCount) frames")
