@@ -15,9 +15,10 @@ class StatusBarController: NSObject {
 
         let menu = NSMenu()
         menu.addItem(makeItem(NSLocalizedString("Take Screenshot", comment: ""), action: #selector(captureScreenshot), key: "x"))
-        menu.addItem(makeItem(NSLocalizedString("Enable Finder Extension...", comment: ""), action: #selector(openExtensionGuide), key: ""))
+        menu.addItem(makeItem(NSLocalizedString("Scrolling Screenshot", comment: ""), action: #selector(startScrollingScreenshot), key: "s"))
+        menu.addItem(makeItem(NSLocalizedString("Enable Finder Extension", comment: ""), action: #selector(openExtensionGuide), key: ""))
         menu.addItem(.separator())
-        menu.addItem(makeItem(NSLocalizedString("Settings...", comment: ""), action: #selector(openSettings), key: ","))
+        menu.addItem(makeItem(NSLocalizedString("Settings", comment: ""), action: #selector(openSettings), key: ","))
         menu.addItem(.separator())
         
         let quitItem = NSMenuItem(title: NSLocalizedString("Quit TermSnap", comment: ""), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
@@ -35,6 +36,20 @@ class StatusBarController: NSObject {
     @objc private func captureScreenshot() {
         Task {
             let result = await captureEngine.capture(.interactive)
+            switch result {
+            case .started:
+                break
+            case .permissionDenied:
+                presentScreenCapturePermissionAlert()
+            case .failed(let reason):
+                presentCaptureFailedAlert(reason: reason)
+            }
+        }
+    }
+
+    @objc private func startScrollingScreenshot() {
+        Task {
+            let result = await captureEngine.capture(.scrolling)
             switch result {
             case .started:
                 break

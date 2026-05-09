@@ -6,6 +6,7 @@ class OverlayWindow: NSWindow {
     private let content: SCShareableContent
     private let windows: [SCWindow]
     private weak var captureEngine: CaptureEngine?
+    private let mode: CaptureMode
     
     private var globalEscMonitor: Any?
     private var localEscMonitor: Any?
@@ -14,11 +15,12 @@ class OverlayWindow: NSWindow {
     /// owner can release its reference without waiting for willClose.
     var onDeactivate: (() -> Void)?
 
-    init(display: SCDisplay, content: SCShareableContent, windows: [SCWindow], image: NSImage, cgImage: CGImage, captureEngine: CaptureEngine) {
+    init(display: SCDisplay, content: SCShareableContent, windows: [SCWindow], image: NSImage, cgImage: CGImage, captureEngine: CaptureEngine, mode: CaptureMode) {
         self.display = display
         self.content = content
         self.windows = windows
         self.captureEngine = captureEngine
+        self.mode = mode
 
         let screen = NSScreen.screens.first { $0.frame.origin.x == display.frame.origin.x } ?? NSScreen.main!
         let frame = screen.frame
@@ -40,9 +42,12 @@ class OverlayWindow: NSWindow {
 
         let overlayView = OverlayView(frame: NSRect(origin: .zero, size: frame.size),
                                       screen: screen,
+                                      display: display,
                                       windows: windows,
                                       backgroundImage: image,
-                                      backgroundCGImage: cgImage)
+                                      backgroundCGImage: cgImage,
+                                      mode: mode,
+                                      captureEngine: captureEngine)
 
         self.contentView = overlayView
     }
@@ -67,22 +72,39 @@ class OverlayWindow: NSWindow {
     // MARK: - Esc Monitoring (Safety First)
 
     private func installEscMonitor() {
-        // Global monitor: catches ESC even when window is not key (Critical Safety)
+        // Global monitor runs on a background queue — dispatch UI work to main.
         globalEscMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
             if event.keyCode == 53 { // Esc
-                NSLog("TermSnap: Global Esc caught")
-                self?.deactivate()
+                DispatchQueue.main.async { self?.handleOverlayDismiss() }
+            } else if event.keyCode == 36 || event.keyCode == 76 { // Enter
+                DispatchQueue.main.async {
+                    if let overlay = self?.contentView as? OverlayView, overlay.state == .scrolling {
+                        overlay.finishScrolling()
+                    }
+                }
             }
         }
-        
-        // Local monitor: catches ESC when our window is key
+
+        // Local monitor: catches Esc/Enter when our window is key (runs on main thread)
         localEscMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             if event.keyCode == 53 { // Esc
-                NSLog("TermSnap: Local Esc caught")
-                self?.deactivate()
-                return nil // swallow event
+                self?.handleOverlayDismiss()
+                return nil
+            }
+            if (event.keyCode == 36 || event.keyCode == 76),
+               let overlay = self?.contentView as? OverlayView, overlay.state == .scrolling {
+                overlay.finishScrolling()
+                return nil
             }
             return event
+        }
+    }
+
+    private func handleOverlayDismiss() {
+        if let overlay = contentView as? OverlayView, overlay.state == .scrolling {
+            overlay.cancel()
+        } else {
+            deactivate()
         }
     }
 
@@ -99,9 +121,19 @@ class OverlayWindow: NSWindow {
 
     func deactivate() {
         removeEscMonitor()
+        ignoresMouseEvents = false
         orderOut(nil)
         onDeactivate?()
         onDeactivate = nil
+    }
+
+    /// Let mouse events pass through so the user can scroll content below.
+    func enableEventPassthrough() {
+        ignoresMouseEvents = true
+    }
+
+    func disableEventPassthrough() {
+        ignoresMouseEvents = false
     }
 
     override var canBecomeKey: Bool { true }

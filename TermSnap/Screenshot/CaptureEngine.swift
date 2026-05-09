@@ -1,8 +1,10 @@
 import ScreenCaptureKit
 import AppKit
+import CoreMedia
 
 enum CaptureMode {
     case interactive
+    case scrolling
 }
 
 enum CaptureStartResult {
@@ -14,6 +16,8 @@ enum CaptureStartResult {
 @MainActor
 class CaptureEngine {
     private var overlayWindow: OverlayWindow?
+    private var currentStream: SCStream?
+    private var currentStreamOutput: StreamOutput?
 
     func capture(_ mode: CaptureMode) async -> CaptureStartResult {
         guard CaptureEngine.ensureScreenCapturePermission() else {
@@ -24,7 +28,7 @@ class CaptureEngine {
             let content = try await SCShareableContent.excludingDesktopWindows(true,
                                                                                onScreenWindowsOnly: true)
             switch mode {
-            case .interactive:
+            case .interactive, .scrolling:
                 guard let display = content.displays.first else {
                     return .failed(reason: "No available display was found for capture.")
                 }
@@ -38,12 +42,51 @@ class CaptureEngine {
                     $0.owningApplication?.bundleIdentifier != "com.apple.dock"
                 }
                 let (cgImage, nsImage) = try await captureDisplay(display)
-                showOverlay(for: display, content: content, windows: windows, image: nsImage, cgImage: cgImage)
+                showOverlay(for: display, content: content, windows: windows, image: nsImage, cgImage: cgImage, mode: mode)
                 return .started
             }
         } catch {
             NSLog("TermSnap: ScreenCaptureKit error: \(error)")
             return .failed(reason: error.localizedDescription)
+        }
+    }
+
+    func startStream(display: SCDisplay, area: CGRect) async throws -> AsyncStream<CGImage> {
+        let output = StreamOutput()
+        let stream = AsyncStream<CGImage> { continuation in
+            output.continuation = continuation
+        }
+
+        let filter = SCContentFilter(display: display, excludingWindows: [])
+        let config = SCStreamConfiguration()
+        
+        let screen = NSScreen.screens.first { $0.frame.origin.x == display.frame.origin.x } ?? NSScreen.main!
+        let scale = screen.backingScaleFactor
+        
+        config.sourceRect = area
+        config.width = Int(area.width * scale)
+        config.height = Int(area.height * scale)
+        config.minimumFrameInterval = CMTime(value: 1, timescale: 10) // 10 FPS
+        config.queueDepth = 5
+        config.pixelFormat = kCVPixelFormatType_32BGRA
+        
+        let scStream = SCStream(filter: filter, configuration: config, delegate: output)
+        try scStream.addStreamOutput(output, type: .screen, sampleHandlerQueue: .global(qos: .userInteractive))
+        
+        try await scStream.startCapture()
+        
+        self.currentStream = scStream
+        self.currentStreamOutput = output
+        
+        return stream
+    }
+
+    func stopStream() async {
+        if let stream = currentStream {
+            try? await stream.stopCapture()
+            currentStreamOutput?.continuation?.finish()
+            currentStream = nil
+            currentStreamOutput = nil
         }
     }
 
@@ -81,12 +124,27 @@ class CaptureEngine {
         return (image, NSImage(cgImage: image, size: pointSize))
     }
 
-    private func showOverlay(for display: SCDisplay, content: SCShareableContent, windows: [SCWindow], image: NSImage, cgImage: CGImage) {
-        let window = OverlayWindow(display: display, content: content, windows: windows, image: image, cgImage: cgImage, captureEngine: self)
+    private func showOverlay(for display: SCDisplay, content: SCShareableContent, windows: [SCWindow], image: NSImage, cgImage: CGImage, mode: CaptureMode) {
+        let window = OverlayWindow(display: display, content: content, windows: windows, image: image, cgImage: cgImage, captureEngine: self, mode: mode)
         overlayWindow = window
         window.onDeactivate = { [weak self] in
             self?.overlayWindow = nil
         }
         window.show()
+    }
+}
+
+class StreamOutput: NSObject, SCStreamDelegate, SCStreamOutput {
+    var continuation: AsyncStream<CGImage>.Continuation?
+    private let ciContext = CIContext()
+
+    func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of type: SCStreamOutputType) {
+        guard type == .screen else { return }
+        guard let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
+
+        let ciImage = CIImage(cvImageBuffer: imageBuffer)
+        guard let cgImage = ciContext.createCGImage(ciImage, from: ciImage.extent) else { return }
+
+        continuation?.yield(cgImage)
     }
 }

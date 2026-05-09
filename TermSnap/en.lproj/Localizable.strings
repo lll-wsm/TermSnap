@@ -1,6 +1,6 @@
 "Save Format" = "Save Format";
 "Save to:" = "Save to:";
-"Choose..." = "Choose...";
+"Choose" = "Choose";
 "Export" = "Export";
 "Show Icon in Context Menu" = "Show Icon in Context Menu";
 "Finder Extension" = "Finder Extension";
@@ -11,12 +11,11 @@
 "Choose default save location for screenshots" = "Choose default save location for screenshots";
 
 "Take Screenshot" = "Take Screenshot";
-"Enable Finder Extension..." = "Enable Finder Extension...";
-"Settings..." = "Settings...";
-"Quit TermSnap" = "Quit TermSnap";
-"Settings" = "Settings";
-
+"Scrolling Screenshot" = "Scrolling Screenshot";
 "Enable Finder Extension" = "Enable Finder Extension";
+"Settings" = "Settings";
+"Quit TermSnap" = "Quit TermSnap";
+
 "To use \"Open Terminal Here\" in Finder's context menu, enable the TermSnap Finder Extension in System Settings." = "To use \"Open Terminal Here\" in Finder's context menu, enable the TermSnap Finder Extension in System Settings.";
 "Open System Settings" = "Open System Settings";
 "I've Enabled It" = "I've Enabled It";
@@ -26,8 +25,9 @@
 "Cancel" = "Cancel";
 "Failed to Capture Screenshot" = "Failed to Capture Screenshot";
 "OK" = "OK";
+"Scrolling Press Enter to finish" = "Scrolling Press Enter to finish";
 
-"Press shortcut..." = "Press shortcut...";
+"Press shortcut" = "Press shortcut";
 "None" = "None";
 "Record" = "Record";
 

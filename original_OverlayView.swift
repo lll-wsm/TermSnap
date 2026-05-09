@@ -7,13 +7,8 @@ class OverlayView: NSView {
     private let backgroundImage: NSImage
     private let backgroundCGImage: CGImage
 
-    private let display: SCDisplay
-    private let mode: CaptureMode
-    private weak var captureEngine: CaptureEngine?
-
     enum CaptureState {
         case selecting   // Hovering / dragging to define the capture region
-        case scrolling   // User is scrolling to capture long content
         case annotating  // Region confirmed — drawing tools active
     }
 
@@ -54,20 +49,11 @@ class OverlayView: NSView {
         }
     }
 
-    // Scrolling capture state
-    private let stitchingEngine = StitchingEngine()
-    private var scrollingHUDPanel: NSPanel?
-    private var borderWindow: NSWindow?
-    private var captureTask: Task<Void, Never>?
-
-    init(frame: NSRect, screen: NSScreen, display: SCDisplay, windows: [SCWindow], backgroundImage: NSImage, backgroundCGImage: CGImage, mode: CaptureMode, captureEngine: CaptureEngine?) {
+    init(frame: NSRect, screen: NSScreen, windows: [SCWindow], backgroundImage: NSImage, backgroundCGImage: CGImage) {
         self.screen = screen
-        self.display = display
         self.windows = windows
         self.backgroundImage = backgroundImage
         self.backgroundCGImage = backgroundCGImage
-        self.mode = mode
-        self.captureEngine = captureEngine
         super.init(frame: frame)
         setupLayers()
         setupAnnotationView()
@@ -77,7 +63,6 @@ class OverlayView: NSView {
 
     private func setupLayers() {
         wantsLayer = true
-        layer?.isGeometryFlipped = true
         layer?.frame = bounds
 
         let backgroundLayer = CALayer()
@@ -150,9 +135,6 @@ class OverlayView: NSView {
             let point = convert(event.locationInWindow, from: nil)
             let resizer = SelectionResizer(selectionRect: currentRect)
             resizer.cursorAt(point).set()
-
-        case .scrolling:
-            break
         }
     }
 
@@ -195,9 +177,6 @@ class OverlayView: NSView {
                 dragFromPoint = point
                 dragStartRect = currentRect
             }
-
-        case .scrolling:
-            break
         }
     }
 
@@ -232,9 +211,6 @@ class OverlayView: NSView {
             showDimensionLabel(for: currentRect)
             annotationView.frame = currentRect
             repositionToolbar(for: currentRect)
-
-        case .scrolling:
-            break
         }
     }
 
@@ -242,17 +218,9 @@ class OverlayView: NSView {
         switch state {
         case .selecting:
             if didDrag && currentRect.width > 5 && currentRect.height > 5 {
-                if mode == .scrolling {
-                    enterScrollingState(with: currentRect)
-                } else {
-                    enterAnnotationState(with: currentRect)
-                }
+                enterAnnotationState(with: currentRect)
             } else if let hRect = hoveredRect {
-                if mode == .scrolling {
-                    enterScrollingState(with: hRect)
-                } else {
-                    enterAnnotationState(with: hRect)
-                }
+                enterAnnotationState(with: hRect)
             }
             startPoint = nil
             didDrag = false
@@ -261,17 +229,12 @@ class OverlayView: NSView {
             selectedHandle = nil
             dragFromPoint = nil
             dragStartRect = nil
-
-        case .scrolling:
-            break
         }
     }
 
     private func findTopmostWindow(at point: NSPoint) -> SCWindow? {
         let sckPoint = convertToSCK(point)
-        // Reversing the search order to ensure we pick the topmost window first.
-        // Some users report that the default order identifies the bottom-most window.
-        return windows.reversed().first { window in
+        return windows.first { window in
             window.frame.contains(sckPoint)
         }
     }
@@ -289,11 +252,6 @@ class OverlayView: NSView {
         let sckGlobalY = primaryScreenHeight - appKitGlobalY
         
         return NSPoint(x: globalX, y: sckGlobalY)
-    }
-
-    private func convertToSCK(_ rect: NSRect) -> CGRect {
-        let topLeft = convertToSCK(rect.origin)
-        return CGRect(x: topLeft.x, y: topLeft.y, width: rect.width, height: rect.height)
     }
 
     private func convertFromSCK(_ rect: CGRect) -> NSRect {
@@ -485,198 +443,12 @@ class OverlayView: NSView {
         }
     }
 
-    // MARK: - Scrolling State
-
-    private func enterScrollingState(with rect: NSRect) {
-        state = .scrolling
-        currentRect = rect
-        stitchingEngine.reset()
-
-        // Capture the display rect in SCK coords before hiding the overlay
-        let sckRect = convertToSCK(rect)
-
-        // sourceRect expects display-relative coordinates (top-left origin).
-        // display.frame is in AppKit coordinates (bottom-left origin).
-        // Convert display.frame.origin to SCK (top-left origin) for correct math.
-        let primaryScreenHeight = NSScreen.screens.first?.frame.height ?? 1080
-        let displayTopY_SCK = primaryScreenHeight - (display.frame.origin.y + display.frame.height)
-        
-        // Rect relative to the display top-left
-        let localDisplayRect = CGRect(
-            x: sckRect.origin.x - display.frame.origin.x,
-            y: sckRect.origin.y - displayTopY_SCK,
-            width: sckRect.width,
-            height: sckRect.height
-        )
-        
-        NSLog("TermSnap: Scrolling area local=\(rect), displayRect=\(localDisplayRect)")
-
-        // Hide the overlay so user can scroll content naturally
-        window?.orderOut(nil)
-
-        // Show a border window around the capture area
-        showBorderWindow(for: rect)
-
-        // Show a small floating HUD panel
-        showScrollingHUDPanel(for: rect)
-
-        captureTask = Task {
-            guard let engine = captureEngine else {
-                NSLog("TermSnap: No captureEngine")
-                return
-            }
-
-            do {
-                NSLog("TermSnap: Starting stream")
-                let stream = try await engine.startStream(display: display, area: localDisplayRect)
-                NSLog("TermSnap: Stream started, waiting for frames")
-                var frameCount = 0
-                for await frame in stream {
-                    if state != .scrolling { break }
-                    frameCount += 1
-                    let result = await stitchingEngine.addFrame(frame)
-                    if frameCount <= 3 {
-                        NSLog("TermSnap: Frame \(frameCount) size=\(frame.width)x\(frame.height), stitched=\(result != nil)")
-                    }
-                }
-                NSLog("TermSnap: Stream ended after \(frameCount) frames")
-            } catch {
-                NSLog("TermSnap: Streaming error: \(error)")
-                await MainActor.run {
-                    self.cancel()
-                }
-            }
-        }
-    }
-
-    private func showBorderWindow(for rect: NSRect) {
-        // Convert local rect to screen coordinates for border window positioning
-        let globalRect = window?.convertToScreen(convert(rect, to: nil)) ?? rect
-        let borderWin = NSWindow(
-            contentRect: globalRect,
-            styleMask: [.borderless],
-            backing: .buffered,
-            defer: false
-        )
-        borderWin.isOpaque = false
-        borderWin.backgroundColor = .clear
-        borderWin.level = .floating
-        borderWin.ignoresMouseEvents = true
-        borderWin.hasShadow = false
-        borderWin.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-
-        // Content view with just a colored border
-        let borderView = NSView(frame: NSRect(origin: .zero, size: globalRect.size))
-        borderView.wantsLayer = true
-        borderView.layer?.borderColor = NSColor.systemBlue.cgColor
-        borderView.layer?.borderWidth = 2
-        borderView.layer?.cornerRadius = 0
-        borderWin.contentView = borderView
-
-        borderWin.orderFront(nil)
-        borderWindow = borderWin
-    }
-
-    private func showScrollingHUDPanel(for rect: NSRect) {
-        let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 280, height: 70),
-            styleMask: [.titled, .nonactivatingPanel],
-            backing: .buffered,
-            defer: false
-        )
-        panel.title = "TermSnap"
-        panel.isFloatingPanel = true
-        panel.level = .floating
-        panel.isOpaque = false
-        panel.backgroundColor = NSColor(white: 0.1, alpha: 0.9)
-        panel.hasShadow = true
-        panel.isReleasedWhenClosed = false
-        panel.hidesOnDeactivate = false
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        panel.ignoresMouseEvents = false
-
-        // Position near the top-center of the screen
-        let screenRect = screen.visibleFrame
-        let panelX = screenRect.midX - 140
-        let panelY = screenRect.maxY - 90
-        panel.setFrameOrigin(NSPoint(x: panelX, y: panelY))
-
-        let contentView = panel.contentView!
-
-        let label = NSTextField(labelWithString: NSLocalizedString("Scrolling Press Enter to finish", comment: ""))
-        label.font = .systemFont(ofSize: 14, weight: .medium)
-        label.textColor = .white
-        label.backgroundColor = .clear
-        label.alignment = .center
-        label.frame = NSRect(x: 10, y: 36, width: 260, height: 20)
-        contentView.addSubview(label)
-
-        let doneBtn = NSButton(frame: NSRect(x: 90, y: 6, width: 100, height: 26))
-        doneBtn.title = NSLocalizedString("Done", comment: "")
-        doneBtn.bezelStyle = .rounded
-        doneBtn.target = self
-        doneBtn.action = #selector(finishScrollingAction)
-        contentView.addSubview(doneBtn)
-
-        panel.orderFront(nil)
-        scrollingHUDPanel = panel
-    }
-
-    @objc private func finishScrollingAction() {
-        finishScrolling()
-    }
-
-    func finishScrolling() {
-        scrollingHUDPanel?.orderOut(nil)
-        scrollingHUDPanel = nil
-        borderWindow?.orderOut(nil)
-        borderWindow = nil
-
-        captureTask?.cancel()
-
-        Task {
-            // Wait for the capture loop to exit, then stop the stream
-            await captureEngine?.stopStream()
-            let finalImage = stitchingEngine.finalize()
-            NSLog("TermSnap: finishScrolling finalImage=\(finalImage != nil ? "\(finalImage!.width)x\(finalImage!.height)" : "nil")")
-            if let finalImage = finalImage {
-                let scale = screen.backingScaleFactor
-                let pointSize = NSImage(cgImage: finalImage, size: NSSize(
-                    width: CGFloat(finalImage.width) / scale,
-                    height: CGFloat(finalImage.height) / scale
-                ))
-                await MainActor.run {
-                    let stitchWindow = StitchedAnnotationWindow(image: pointSize, screen: screen)
-                    stitchWindow.show()
-                    stitchWindow.onDeactivate = { [weak self] in
-                        self?.cleanupOverlay()
-                    }
-                }
-            } else {
-                await MainActor.run {
-                    self.cancel()
-                }
-            }
-        }
-    }
-
-    /// Called by StitchedAnnotationWindow when it's done, to fully clean up the overlay.
-    private func cleanupOverlay() {
-        if let ow = window as? OverlayWindow {
-            ow.deactivate()
-        }
-    }
-
-    // MARK: - Keyboard
-
     override func keyDown(with event: NSEvent) {
         if event.keyCode == 53 { // Esc
             cancel()
         } else if event.keyCode == 36 || event.keyCode == 76 { // Return / Enter
             if state == .annotating {
                 copyToClipboard()
-            } else if state == .scrolling {
-                finishScrolling()
             }
         }
     }
@@ -686,17 +458,6 @@ class OverlayView: NSView {
     }
 
     @objc func cancel() {
-        if state == .scrolling {
-            captureTask?.cancel()
-            captureTask = nil
-            scrollingHUDPanel?.orderOut(nil)
-            scrollingHUDPanel = nil
-            borderWindow?.orderOut(nil)
-            borderWindow = nil
-            Task {
-                await captureEngine?.stopStream()
-            }
-        }
         if let ow = window as? OverlayWindow {
             ow.deactivate()
         } else {

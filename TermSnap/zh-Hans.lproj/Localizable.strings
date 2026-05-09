@@ -11,12 +11,11 @@
 "Choose default save location for screenshots" = "为截图选择默认保存位置";
 
 "Take Screenshot" = "进行截图";
+"Scrolling Screenshot" = "滚动截图";
 "Enable Finder Extension" = "启用 Finder 扩展";
 "Settings" = "设置";
 "Quit TermSnap" = "退出 TermSnap";
-"Settings" = "设置";
 
-"Enable Finder Extension" = "启用 Finder 扩展";
 "To use \"Open Terminal Here\" in Finder's context menu, enable the TermSnap Finder Extension in System Settings." = "要在 Finder 的右键菜单中使用“在此处打开终端”，请在系统设置中启用 TermSnap Finder 扩展。";
 "Open System Settings" = "打开系统设置";
 "I've Enabled It" = "我已经启用了";
@@ -26,6 +25,7 @@
 "Cancel" = "取消";
 "Failed to Capture Screenshot" = "截图失败";
 "OK" = "确定";
+"Scrolling Press Enter to finish" = "正在录制 按回车键完成";
 
 "Press shortcut" = "请按快捷键";
 "None" = "无";
