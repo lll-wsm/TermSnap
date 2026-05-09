@@ -129,13 +129,35 @@ class OverlayView: NSView {
             guard isTracking else { return }
             guard startPoint == nil else { return }
             let point = convert(event.locationInWindow, from: nil)
+            let sckPoint = convertToSCK(point)
+            
             if let window = findTopmostWindow(at: point) {
                 if window.windowID != hoveredWindow?.windowID {
                     hoveredWindow = window
+                }
+                
+                // Try to find a precise scroll area within the hovered window
+                if mode == .scrolling,
+                   let scrollArea = AccessibilityEngine.findScrollArea(at: sckPoint),
+                   window.frame.intersects(scrollArea) {
+                    
+                    // Convert the global SCK (Top-Left) scroll area rect to our local (Flipped AppKit) rect
+                    let localRect = convertFromSCK(scrollArea)
+                    
+                    // Ensure the scroll area is bounded by the window frame
+                    let localWindowRect = convertFromSCK(window.frame)
+                    let boundedRect = localRect.intersection(localWindowRect)
+                    
+                    hoveredRect = boundedRect
+                    updateSelection(rect: boundedRect)
+                    
+                } else {
+                    // Fallback to the entire SCWindow frame
                     let rect = convertFromSCK(window.frame)
                     hoveredRect = rect
                     updateSelection(rect: rect)
                 }
+                
             } else {
                 // Fallback to full screen if hovering over desktop
                 if hoveredWindow != nil || hoveredRect != bounds {
@@ -271,6 +293,17 @@ class OverlayView: NSView {
         let sckPoint = convertToSCK(point)
         return windows.first { window in
             window.frame.contains(sckPoint)
+        }
+    }
+
+    /// Finds the SCWindow most closely matching a selection rect (used when
+    /// the user dragged a custom rect rather than clicking a window).
+    private func findSCWindow(for localRect: NSRect) -> SCWindow? {
+        let sckRect = convertToSCK(localRect)
+        return windows.first { window in
+            let intersection = sckRect.intersection(window.frame)
+            return intersection.width >= sckRect.width * 0.8 &&
+                   intersection.height >= sckRect.height * 0.8
         }
     }
 
@@ -510,6 +543,21 @@ class OverlayView: NSView {
         )
         
         NSLog("TermSnap: Scrolling start. DisplayOrigin=\(display.frame.origin), sckRect=\(sckRect), local=\(localDisplayRect)")
+
+        // Try AX-based content area detection before streaming
+        let targetSCWindow = hoveredWindow ?? findSCWindow(for: rect)
+        if let scWin = targetSCWindow {
+            if let axRect = ContentRectDetector.axContentRect(
+                for: scWin, display: display,
+                sourceRect: localDisplayRect,
+                scale: screen.backingScaleFactor
+            ) {
+                stitchingEngine.setContentRect(top: axRect.0, bottom: axRect.1, left: axRect.2, right: axRect.3)
+                NSLog("TermSnap: AX content rect t=\(axRect.0) b=\(axRect.1) l=\(axRect.2) r=\(axRect.3)")
+            } else {
+                NSLog("TermSnap: AX detection failed, will fall back to pixel detection")
+            }
+        }
 
         // Hide the overlay so user can scroll content naturally
         window?.orderOut(nil)

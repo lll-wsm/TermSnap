@@ -38,8 +38,13 @@ class AccessibilityEngine {
                 let sizeErr = AXUIElementCopyAttributeValue(currentElement, kAXSizeAttribute as CFString, &sizeRef)
                 
                 if posErr == .success, sizeErr == .success,
-                   let posVal = positionRef as? AXValue,
-                   let sizeVal = sizeRef as? AXValue {
+                   let positionRef,
+                   let sizeRef,
+                   CFGetTypeID(positionRef) == AXValueGetTypeID(),
+                   CFGetTypeID(sizeRef) == AXValueGetTypeID() {
+                    
+                    let posVal = positionRef as! AXValue
+                    let sizeVal = sizeRef as! AXValue
                     var axPosition = CGPoint.zero
                     var axSize = CGSize.zero
                     
@@ -55,8 +60,9 @@ class AccessibilityEngine {
             // Move to parent
             var parent: CFTypeRef?
             if AXUIElementCopyAttributeValue(currentElement, kAXParentAttribute as CFString, &parent) == .success,
-               let parentElement = parent as? AXUIElement {
-                currentElement = parentElement
+               let parentRef = parent,
+               CFGetTypeID(parentRef) == AXUIElementGetTypeID() {
+                currentElement = parentRef as! AXUIElement
             } else {
                 break // No parent
             }
