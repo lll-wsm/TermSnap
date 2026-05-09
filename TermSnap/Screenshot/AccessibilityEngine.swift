@@ -38,8 +38,7 @@ class AccessibilityEngine {
                 let sizeErr = AXUIElementCopyAttributeValue(currentElement, kAXSizeAttribute as CFString, &sizeRef)
                 
                 if posErr == .success, sizeErr == .success,
-                   let positionRef,
-                   let sizeRef,
+                   let positionRef, let sizeRef,
                    CFGetTypeID(positionRef) == AXValueGetTypeID(),
                    CFGetTypeID(sizeRef) == AXValueGetTypeID() {
                     
@@ -52,7 +51,54 @@ class AccessibilityEngine {
                     let sizeSuccess = AXValueGetValue(sizeVal, .cgSize, &axSize)
                     
                     if posSuccess && sizeSuccess {
-                        return CGRect(origin: axPosition, size: axSize)
+                        var finalRect = CGRect(origin: axPosition, size: axSize)
+                        
+                        // --- NEW: Subtract Scrollbars ---
+                        let scrollBarAttributes = [
+                            "AXVerticalScrollBar",
+                            "AXHorizontalScrollBar"
+                        ]
+                        
+                        for attr in scrollBarAttributes {
+                            var scrollBarRef: CFTypeRef?
+                            if AXUIElementCopyAttributeValue(currentElement, attr as CFString, &scrollBarRef) == .success,
+                               let scrollBarRef = scrollBarRef,
+                               CFGetTypeID(scrollBarRef) == AXUIElementGetTypeID() {
+                                
+                                let scrollBar = scrollBarRef as! AXUIElement
+                                
+                                var sbPosRef: CFTypeRef?
+                                var sbSizeRef: CFTypeRef?
+                                if AXUIElementCopyAttributeValue(scrollBar, kAXPositionAttribute as CFString, &sbPosRef) == .success,
+                                   AXUIElementCopyAttributeValue(scrollBar, kAXSizeAttribute as CFString, &sbSizeRef) == .success,
+                                   let sbPosRef = sbPosRef, let sbSizeRef = sbSizeRef,
+                                   CFGetTypeID(sbPosRef) == AXValueGetTypeID(),
+                                   CFGetTypeID(sbSizeRef) == AXValueGetTypeID() {
+                                    
+                                    let sbPosVal = sbPosRef as! AXValue
+                                    let sbSizeVal = sbSizeRef as! AXValue
+                                    
+                                    var sbPos = CGPoint.zero
+                                    var sbSize = CGSize.zero
+                                    AXValueGetValue(sbPosVal, .cgPoint, &sbPos)
+                                    AXValueGetValue(sbSizeVal, .cgSize, &sbSize)
+                                    
+                                    let sbRect = CGRect(origin: sbPos, size: sbSize)
+                                    
+                                    // If scrollbar is at the edge, subtract it
+                                    if sbRect.minX > finalRect.minX + finalRect.width * 0.8 {
+                                        // Vertical scrollbar on the right
+                                        finalRect.size.width -= sbRect.width
+                                    } else if sbRect.minY > finalRect.minY + finalRect.height * 0.8 {
+                                        // Horizontal scrollbar at the bottom
+                                        finalRect.size.height -= sbRect.height
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // --- NEW: Apply 1px Safety Padding ---
+                        return finalRect.insetBy(dx: 1, dy: 1)
                     }
                 }
             }
