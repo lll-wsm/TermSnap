@@ -13,10 +13,12 @@ class StitchingEngine {
     private var lastFrame: CGImage?
     private var phase: StitchingPhase = .baseline
     
-    // The exact verified scrolling area bounds
+    // Original frame dimensions
+    private var frameWidth: Int = 0
+    private var frameHeight: Int = 0
+    
+    // The exact verified scrolling area bounds (relative to the frame)
     private var finalCropRect: CGRect?
-    private var headerRect: CGRect?
-    private var footerRect: CGRect?
 
     // Persistent buffer context
     private var bufferContext: CGContext?
@@ -37,9 +39,9 @@ class StitchingEngine {
         baselineFrame = nil
         lastFrame = nil
         phase = .baseline
+        frameWidth = 0
+        frameHeight = 0
         finalCropRect = nil
-        headerRect = nil
-        footerRect = nil
         
         minY = initialY
         maxY = initialY
@@ -55,6 +57,8 @@ class StitchingEngine {
         
         switch phase {
         case .baseline:
+            self.frameWidth = newFrame.width
+            self.frameHeight = newFrame.height
             setupBuffer(width: newFrame.width, height: bufferMaxHeight)
             baselineFrame = newFrame
             lastFrame = newFrame
@@ -84,26 +88,16 @@ class StitchingEngine {
                 // Only attempt differencing if we moved significantly from baseline
                 if abs(totalDy) >= 5 {
                     if let bounds = MotionDifferencingEngine.detectContentRect(baseline: baseline, current: newFrame, dy: totalDy) {
-                        self.headerRect = CGRect(x: 0, y: 0, width: CGFloat(frameW), height: CGFloat(bounds.topY))
                         self.finalCropRect = CGRect(x: 0, y: CGFloat(bounds.topY), width: CGFloat(frameW), height: CGFloat(bounds.bottomY - bounds.topY + 1))
-                        let footerHeight = frameH - Double(bounds.bottomY + 1)
-                        self.footerRect = CGRect(x: 0, y: CGFloat(bounds.bottomY + 1), width: CGFloat(frameW), height: CGFloat(max(0, footerHeight)))
                         
-                        // Retrospective: draw the header and the baseline frame cropped to exactly the content rect
-                        if let header = self.headerRect, let crop = self.finalCropRect,
-                           let croppedHeader = baseline.cropping(to: header),
+                        // Retrospective: draw the baseline frame cropped to exactly the content rect
+                        if let crop = self.finalCropRect,
                            let croppedBaseline = baseline.cropping(to: crop) {
                             
                             self.minY = initialY
                             self.currentOffset = initialY
                             
-                            // Draw static header
-                            if header.height > 0 {
-                                drawInBuffer(croppedHeader, at: currentOffset, height: Double(header.height))
-                                self.currentOffset += Double(header.height)
-                            }
-                            
-                            // Draw first chunk of scrolling content
+                            // Draw first chunk of scrolling content into the buffer
                             drawInBuffer(croppedBaseline, at: currentOffset, height: Double(crop.height))
                             self.maxY = currentOffset + Double(crop.height)
                         }
@@ -200,7 +194,7 @@ class StitchingEngine {
         guard let fullBuffer = bufferContext?.makeImage() else { return nil }
         
         // If we haven't determined bounds yet, just return the baseline frame
-        guard phase == .stableStitching, let footer = footerRect, let last = lastFrame else {
+        guard phase == .stableStitching else {
             return baselineFrame
         }
         
@@ -208,34 +202,6 @@ class StitchingEngine {
         guard usedHeight > 0 else { return baselineFrame }
 
         let bufferCropRect = CGRect(x: 0, y: CGFloat(minY), width: CGFloat(fullBuffer.width), height: CGFloat(usedHeight))
-        guard let croppedBuffer = fullBuffer.cropping(to: bufferCropRect) else { return baselineFrame }
-        
-        if footer.height <= 0 { return croppedBuffer }
-        
-        // Create final context incorporating the footer
-        let finalWidth = fullBuffer.width
-        let finalHeight = usedHeight + Int(footer.height)
-        
-        guard let finalContext = CGContext(
-            data: nil,
-            width: finalWidth, height: finalHeight,
-            bitsPerComponent: 8,
-            bytesPerRow: finalWidth * 4,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
-        ) else { return croppedBuffer }
-        
-        finalContext.setFillColor(NSColor.white.cgColor)
-        finalContext.fill(CGRect(x: 0, y: 0, width: finalWidth, height: finalHeight))
-        
-        // Draw footer at bottom (y = 0 in CoreGraphics bottom-left coordinates)
-        if let croppedFooter = last.cropping(to: footer) {
-            finalContext.draw(croppedFooter, in: CGRect(x: 0, y: 0, width: CGFloat(finalWidth), height: footer.height))
-        }
-        
-        // Draw scroll content above footer (y = footer.height)
-        finalContext.draw(croppedBuffer, in: CGRect(x: 0, y: footer.height, width: CGFloat(finalWidth), height: CGFloat(usedHeight)))
-        
-        return finalContext.makeImage() ?? croppedBuffer
+        return fullBuffer.cropping(to: bufferCropRect) ?? baselineFrame
     }
 }
