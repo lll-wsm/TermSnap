@@ -65,32 +65,22 @@ struct MotionDifferencingEngine {
             }
         }
         
-        // Find longest contiguous block of true
-        var maxLen = 0
-        var maxStart = 0
-        var currentLen = 0
-        var currentStart = 0
+        // Find range of rows with motion
+        var firstMotionRow: Int?
+        var lastMotionRow: Int?
+        var totalMotionRows = 0
         
         for y in 0..<height {
             if isContent[y] {
-                if currentLen == 0 { currentStart = y }
-                currentLen += 1
-            } else {
-                if currentLen > maxLen {
-                    maxLen = currentLen
-                    maxStart = currentStart
-                }
-                currentLen = 0
+                if firstMotionRow == nil { firstMotionRow = y }
+                lastMotionRow = y
+                totalMotionRows += 1
             }
         }
-        if currentLen > maxLen {
-            maxLen = currentLen
-            maxStart = currentStart
-        }
         
-        // If we found a substantial block (e.g. > 50 pixels)
-        if maxLen > 50 {
-            return (topY: maxStart, bottomY: maxStart + maxLen - 1)
+        // If we found significant total motion (e.g. > 30 pixels total)
+        if let start = firstMotionRow, let end = lastMotionRow, totalMotionRows > 30 {
+            return (topY: start, bottomY: end)
         }
         
         return nil

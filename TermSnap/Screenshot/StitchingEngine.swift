@@ -67,16 +67,18 @@ class StitchingEngine {
             do {
                 try handler.perform([registrationRequest])
                 guard let observation = registrationRequest.results?.first as? VNImageTranslationAlignmentObservation else {
+                    self.lastFrame = newFrame
                     return finalize()
                 }
                 
                 let transform = observation.alignmentTransform
                 let rawDy = -Double(transform.ty)
-                let dy = Int(round(rawDy))
+                self.accumulatedDy += rawDy
+                let totalDy = Int(round(self.accumulatedDy))
                 
-                // Only attempt differencing if we moved a bit
-                if abs(dy) >= 2 {
-                    if let bounds = MotionDifferencingEngine.detectContentRect(baseline: baseline, current: newFrame, dy: dy) {
+                // Only attempt differencing if we moved significantly from baseline
+                if abs(totalDy) >= 5 {
+                    if let bounds = MotionDifferencingEngine.detectContentRect(baseline: baseline, current: newFrame, dy: totalDy) {
                         self.finalCropRect = CGRect(x: 0, y: CGFloat(bounds.topY), width: CGFloat(frameW), height: CGFloat(bounds.bottomY - bounds.topY + 1))
                         
                         // Retrospective: draw the baseline frame cropped to exactly the content rect
@@ -92,6 +94,7 @@ class StitchingEngine {
                         
                         // Process the current frame via stable logic
                         self.lastFrame = baseline // reset lastFrame so dy accumulation works correctly next time
+                        self.accumulatedDy = 0 // Reset accumulation for stable tracking
                         return await addFrame(newFrame)
                     }
                 }
