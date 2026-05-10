@@ -54,6 +54,7 @@ class StitchingEngine {
     func addFrame(_ newFrame: CGImage) async -> CGImage? {
         let frameH = Double(newFrame.height)
         let frameW = Double(newFrame.width)
+        print("DEBUG: addFrame phase=\(phase) width=\(newFrame.width)")
         
         switch phase {
         case .baseline:
@@ -120,6 +121,11 @@ class StitchingEngine {
             
         case .stableStitching:
             guard let last = lastFrame, let cropRect = finalCropRect else { return finalize() }
+            
+            // Check width consistency
+            if newFrame.width != last.width {
+                return finalize()
+            }
             
             let handler = VNImageRequestHandler(cgImage: last, options: [:])
             let registrationRequest = VNTranslationalImageRegistrationRequest(targetedCGImage: newFrame)
@@ -191,17 +197,67 @@ class StitchingEngine {
     }
 
     func finalize() -> CGImage? {
-        guard let fullBuffer = bufferContext?.makeImage() else { return nil }
-        
-        // If we haven't determined bounds yet, just return the baseline frame
-        guard phase == .stableStitching else {
-            return baselineFrame
+        guard let fullBuffer = bufferContext?.makeImage(), 
+              let last = lastFrame, 
+              let cropRect = finalCropRect else { 
+            return baselineFrame 
         }
         
-        let usedHeight = Int(ceil(maxY - minY))
-        guard usedHeight > 0 else { return baselineFrame }
+        if phase != .stableStitching { return lastFrame ?? baselineFrame }
 
-        let bufferCropRect = CGRect(x: 0, y: CGFloat(minY), width: CGFloat(fullBuffer.width), height: CGFloat(usedHeight))
-        return fullBuffer.cropping(to: bufferCropRect) ?? baselineFrame
+        // 1. Extract the stitched scrolling content
+        let contentHeight = Int(ceil(maxY - minY))
+        guard contentHeight > 0 else { return lastFrame ?? baselineFrame }
+        
+        let cropY = CGFloat(Double(bufferMaxHeight) - maxY)
+        let bufferCropRect = CGRect(x: 0, y: cropY, width: CGFloat(fullBuffer.width), height: CGFloat(contentHeight))
+        guard let stitchedImage = fullBuffer.cropping(to: bufferCropRect) else { return lastFrame ?? baselineFrame }
+        
+        // 2. Extract Chrome from LAST frame (as decided in brainstorming)
+        let headerHeight = Int(cropRect.minY)
+        let footerY = Int(cropRect.maxY)
+        let footerHeight = Int(last.height) - footerY
+        
+        // 3. Composite everything
+        let totalHeight = headerHeight + contentHeight + max(0, footerHeight)
+        let width = last.width
+        
+        guard let finalContext = CGContext(
+            data: nil, width: width, height: totalHeight,
+            bitsPerComponent: 8, bytesPerRow: width * 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
+        ) else { return stitchedImage }
+        
+        finalContext.setFillColor(NSColor.white.cgColor)
+        finalContext.fill(CGRect(x: 0, y: 0, width: width, height: totalHeight))
+        
+        // Coordinate System: CoreGraphics bottom-left
+        // [Header] top
+        // [Stitched] mid
+        // [Footer] bottom (y=0)
+        
+        // Draw Footer
+        if footerHeight > 0 {
+            let footerSourceRect = CGRect(x: 0, y: CGFloat(footerY), width: CGFloat(width), height: CGFloat(footerHeight))
+            if let footerImg = last.cropping(to: footerSourceRect) {
+                finalContext.draw(footerImg, in: CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(footerHeight)))
+            }
+        }
+        
+        // Draw Stitched Content
+        let stitchedY = CGFloat(max(0, footerHeight))
+        finalContext.draw(stitchedImage, in: CGRect(x: 0, y: stitchedY, width: CGFloat(width), height: CGFloat(contentHeight)))
+        
+        // Draw Header
+        if headerHeight > 0 {
+            let headerSourceRect = CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(headerHeight))
+            if let headerImg = last.cropping(to: headerSourceRect) {
+                let headerY = stitchedY + CGFloat(contentHeight)
+                finalContext.draw(headerImg, in: CGRect(x: 0, y: headerY, width: CGFloat(width), height: CGFloat(headerHeight)))
+            }
+        }
+        
+        return finalContext.makeImage()
     }
 }
