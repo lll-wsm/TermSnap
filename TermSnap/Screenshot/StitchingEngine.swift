@@ -2,8 +2,19 @@ import Vision
 import CoreGraphics
 import AppKit
 
+enum StitchingPhase {
+    case baseline
+    case motionDetection
+    case stableStitching
+}
+
 class StitchingEngine {
+    private var baselineFrame: CGImage?
     private var lastFrame: CGImage?
+    private var phase: StitchingPhase = .baseline
+    
+    // The exact verified scrolling area bounds
+    private var finalCropRect: CGRect?
 
     // Persistent buffer context
     private var bufferContext: CGContext?
@@ -21,7 +32,11 @@ class StitchingEngine {
 
     func reset() {
         bufferContext = nil
+        baselineFrame = nil
         lastFrame = nil
+        phase = .baseline
+        finalCropRect = nil
+        
         minY = initialY
         maxY = initialY
         currentOffset = initialY
@@ -30,73 +45,111 @@ class StitchingEngine {
         frameCount = 0
     }
 
-    /// Processes a new frame. Returns the used portion of the large buffer.
     func addFrame(_ newFrame: CGImage) async -> CGImage? {
         let frameH = Double(newFrame.height)
         let frameW = Double(newFrame.width)
         
-        guard let last = lastFrame else {
+        switch phase {
+        case .baseline:
             setupBuffer(width: newFrame.width, height: bufferMaxHeight)
-            drawInBuffer(newFrame, at: initialY, height: frameH)
+            baselineFrame = newFrame
             lastFrame = newFrame
-            minY = initialY
-            maxY = initialY + frameH
-            currentOffset = initialY
-            return finalize()
-        }
-
-        let handler = VNImageRequestHandler(cgImage: last, options: [:])
-        let registrationRequest = VNTranslationalImageRegistrationRequest(targetedCGImage: newFrame)
-        // No regionOfInterest - use full frame for maximum precision
-
-        do {
-            try handler.perform([registrationRequest])
-            guard let observation = registrationRequest.results?.first as? VNImageTranslationAlignmentObservation else {
-                return finalize()
-            }
-
-            let transform = observation.alignmentTransform
-            let rawDy = -Double(transform.ty)
-            self.lastDy = rawDy
-            self.accumulatedDy += rawDy
-            frameCount += 1
-
-            let dy = Int(round(accumulatedDy))
-            if abs(dy) == 0 { return finalize() }
-
-            if abs(dy) > Int(frameH / 2) {
-                lastFrame = newFrame
-                accumulatedDy = 0
-                return finalize()
-            }
-
-            accumulatedDy -= Double(dy)
-            currentOffset += Double(dy)
-
-            if dy > 0 {
-                // Scroll DOWN: new frame sits higher in the document. Drawing the full
-                // frame would place its title bar over previous-frame content, so only
-                // draw the non-overlapping bottom portion.
-                let extractH = min(dy, newFrame.height)
-                let srcY = newFrame.height - extractH
-                if let slice = newFrame.cropping(to: CGRect(x: 0, y: srcY, width: Int(frameW), height: extractH)) {
-                    drawInBuffer(slice, at: currentOffset + Double(srcY), height: Double(extractH))
+            phase = .motionDetection
+            return finalize() // Haven't drawn anything yet, will draw baseline once bounds are known
+            
+        case .motionDetection:
+            guard let last = lastFrame, let baseline = baselineFrame else { return finalize() }
+            
+            // Calculate dy via Vision
+            let handler = VNImageRequestHandler(cgImage: last, options: [:])
+            let registrationRequest = VNTranslationalImageRegistrationRequest(targetedCGImage: newFrame)
+            
+            do {
+                try handler.perform([registrationRequest])
+                guard let observation = registrationRequest.results?.first as? VNImageTranslationAlignmentObservation else {
+                    return finalize()
                 }
-            } else {
-                // Scroll UP: new frame sits lower in the document. Its title bar is
-                // below the previous frame and cannot overwrite it. Full frame is safe.
-                drawInBuffer(newFrame, at: currentOffset, height: frameH)
+                
+                let transform = observation.alignmentTransform
+                let rawDy = -Double(transform.ty)
+                let dy = Int(round(rawDy))
+                
+                // Only attempt differencing if we moved a bit
+                if abs(dy) >= 2 {
+                    if let bounds = MotionDifferencingEngine.detectContentRect(baseline: baseline, current: newFrame, dy: dy) {
+                        self.finalCropRect = CGRect(x: 0, y: CGFloat(bounds.topY), width: CGFloat(frameW), height: CGFloat(bounds.bottomY - bounds.topY + 1))
+                        
+                        // Retrospective: draw the baseline frame cropped to exactly the content rect
+                        if let crop = self.finalCropRect, let croppedBaseline = baseline.cropping(to: crop) {
+                            self.minY = initialY
+                            self.maxY = initialY + Double(crop.height)
+                            self.currentOffset = initialY
+                            drawInBuffer(croppedBaseline, at: initialY, height: Double(crop.height))
+                        }
+                        
+                        // Transition to stable mode
+                        self.phase = .stableStitching
+                        
+                        // Process the current frame via stable logic
+                        self.lastFrame = baseline // reset lastFrame so dy accumulation works correctly next time
+                        return await addFrame(newFrame)
+                    }
+                }
+            } catch {
+                NSLog("TermSnap: Vision error: \(error)")
             }
-
-            minY = min(minY, currentOffset)
-            maxY = max(maxY, currentOffset + frameH)
             
             lastFrame = newFrame
             return finalize()
-        } catch {
-            NSLog("TermSnap: Vision error: \(error)")
+            
+        case .stableStitching:
+            guard let last = lastFrame, let cropRect = finalCropRect else { return finalize() }
+            
+            let handler = VNImageRequestHandler(cgImage: last, options: [:])
+            let registrationRequest = VNTranslationalImageRegistrationRequest(targetedCGImage: newFrame)
+            
+            do {
+                try handler.perform([registrationRequest])
+                guard let observation = registrationRequest.results?.first as? VNImageTranslationAlignmentObservation else {
+                    return finalize()
+                }
+
+                let transform = observation.alignmentTransform
+                let rawDy = -Double(transform.ty)
+                self.lastDy = rawDy
+                self.accumulatedDy += rawDy
+                frameCount += 1
+
+                let dy = Int(round(accumulatedDy))
+                if abs(dy) == 0 { return finalize() }
+
+                // Sanity check: if vision lost tracking completely
+                if abs(dy) > Int(frameH / 2) {
+                    lastFrame = newFrame
+                    accumulatedDy = 0
+                    return finalize()
+                }
+
+                accumulatedDy -= Double(dy)
+                currentOffset += Double(dy)
+
+                // The Magic: We just crop the new frame strictly to the content bounds
+                // and draw it directly over the existing buffer at the new offset.
+                if let croppedNewFrame = newFrame.cropping(to: cropRect) {
+                    drawInBuffer(croppedNewFrame, at: currentOffset, height: Double(cropRect.height))
+                    
+                    minY = min(minY, currentOffset)
+                    maxY = max(maxY, currentOffset + Double(cropRect.height))
+                }
+                
+                lastFrame = newFrame
+                return finalize()
+                
+            } catch {
+                NSLog("TermSnap: Vision error: \(error)")
+            }
+            return finalize()
         }
-        return finalize()
     }
 
     // MARK: - Buffer drawing
@@ -123,8 +176,12 @@ class StitchingEngine {
 
     func finalize() -> CGImage? {
         guard let fullBuffer = bufferContext?.makeImage() else { return nil }
+        
+        // If we haven't determined bounds yet, just return the baseline frame
+        guard phase == .stableStitching else { return baselineFrame }
+        
         let usedHeight = Int(ceil(maxY - minY))
-        guard usedHeight > 0 else { return nil }
+        guard usedHeight > 0 else { return baselineFrame }
 
         let cropRect = CGRect(x: 0, y: CGFloat(minY), width: CGFloat(fullBuffer.width), height: CGFloat(usedHeight))
         return fullBuffer.cropping(to: cropRect)
