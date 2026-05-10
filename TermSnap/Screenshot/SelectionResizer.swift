@@ -40,7 +40,7 @@ struct SelectionResizer {
 
     func cursorAt(_ point: NSPoint) -> NSCursor {
         if let handle = handleAt(point) { return handle.cursor() }
-        if selectionRect.contains(point) { return .arrow }
+        if selectionRect.contains(point) { return .openHand }
         return .arrow
     }
 
