@@ -15,6 +15,8 @@ class StitchingEngine {
     
     // The exact verified scrolling area bounds
     private var finalCropRect: CGRect?
+    private var headerRect: CGRect?
+    private var footerRect: CGRect?
 
     // Persistent buffer context
     private var bufferContext: CGContext?
@@ -36,6 +38,8 @@ class StitchingEngine {
         lastFrame = nil
         phase = .baseline
         finalCropRect = nil
+        headerRect = nil
+        footerRect = nil
         
         minY = initialY
         maxY = initialY
@@ -55,6 +59,7 @@ class StitchingEngine {
             baselineFrame = newFrame
             lastFrame = newFrame
             phase = .motionDetection
+            frameCount = 1
             return finalize() // Haven't drawn anything yet, will draw baseline once bounds are known
             
         case .motionDetection:
@@ -79,14 +84,28 @@ class StitchingEngine {
                 // Only attempt differencing if we moved significantly from baseline
                 if abs(totalDy) >= 5 {
                     if let bounds = MotionDifferencingEngine.detectContentRect(baseline: baseline, current: newFrame, dy: totalDy) {
+                        self.headerRect = CGRect(x: 0, y: 0, width: CGFloat(frameW), height: CGFloat(bounds.topY))
                         self.finalCropRect = CGRect(x: 0, y: CGFloat(bounds.topY), width: CGFloat(frameW), height: CGFloat(bounds.bottomY - bounds.topY + 1))
+                        let footerHeight = frameH - Double(bounds.bottomY + 1)
+                        self.footerRect = CGRect(x: 0, y: CGFloat(bounds.bottomY + 1), width: CGFloat(frameW), height: CGFloat(max(0, footerHeight)))
                         
-                        // Retrospective: draw the baseline frame cropped to exactly the content rect
-                        if let crop = self.finalCropRect, let croppedBaseline = baseline.cropping(to: crop) {
+                        // Retrospective: draw the header and the baseline frame cropped to exactly the content rect
+                        if let header = self.headerRect, let crop = self.finalCropRect,
+                           let croppedHeader = baseline.cropping(to: header),
+                           let croppedBaseline = baseline.cropping(to: crop) {
+                            
                             self.minY = initialY
-                            self.maxY = initialY + Double(crop.height)
                             self.currentOffset = initialY
-                            drawInBuffer(croppedBaseline, at: initialY, height: Double(crop.height))
+                            
+                            // Draw static header
+                            if header.height > 0 {
+                                drawInBuffer(croppedHeader, at: currentOffset, height: Double(header.height))
+                                self.currentOffset += Double(header.height)
+                            }
+                            
+                            // Draw first chunk of scrolling content
+                            drawInBuffer(croppedBaseline, at: currentOffset, height: Double(crop.height))
+                            self.maxY = currentOffset + Double(crop.height)
                         }
                         
                         // Transition to stable mode
@@ -99,7 +118,7 @@ class StitchingEngine {
                     }
                 }
             } catch {
-                NSLog("TermSnap: Vision error: \(error)")
+                // Vision error
             }
             
             lastFrame = newFrame
@@ -149,7 +168,7 @@ class StitchingEngine {
                 return finalize()
                 
             } catch {
-                NSLog("TermSnap: Vision error: \(error)")
+                // Vision error
             }
             return finalize()
         }
@@ -181,12 +200,42 @@ class StitchingEngine {
         guard let fullBuffer = bufferContext?.makeImage() else { return nil }
         
         // If we haven't determined bounds yet, just return the baseline frame
-        guard phase == .stableStitching else { return baselineFrame }
+        guard phase == .stableStitching, let footer = footerRect, let last = lastFrame else {
+            return baselineFrame
+        }
         
         let usedHeight = Int(ceil(maxY - minY))
         guard usedHeight > 0 else { return baselineFrame }
 
-        let cropRect = CGRect(x: 0, y: CGFloat(minY), width: CGFloat(fullBuffer.width), height: CGFloat(usedHeight))
-        return fullBuffer.cropping(to: cropRect)
+        let bufferCropRect = CGRect(x: 0, y: CGFloat(minY), width: CGFloat(fullBuffer.width), height: CGFloat(usedHeight))
+        guard let croppedBuffer = fullBuffer.cropping(to: bufferCropRect) else { return baselineFrame }
+        
+        if footer.height <= 0 { return croppedBuffer }
+        
+        // Create final context incorporating the footer
+        let finalWidth = fullBuffer.width
+        let finalHeight = usedHeight + Int(footer.height)
+        
+        guard let finalContext = CGContext(
+            data: nil,
+            width: finalWidth, height: finalHeight,
+            bitsPerComponent: 8,
+            bytesPerRow: finalWidth * 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
+        ) else { return croppedBuffer }
+        
+        finalContext.setFillColor(NSColor.white.cgColor)
+        finalContext.fill(CGRect(x: 0, y: 0, width: finalWidth, height: finalHeight))
+        
+        // Draw footer at bottom (y = 0 in CoreGraphics bottom-left coordinates)
+        if let croppedFooter = last.cropping(to: footer) {
+            finalContext.draw(croppedFooter, in: CGRect(x: 0, y: 0, width: CGFloat(finalWidth), height: footer.height))
+        }
+        
+        // Draw scroll content above footer (y = footer.height)
+        finalContext.draw(croppedBuffer, in: CGRect(x: 0, y: footer.height, width: CGFloat(finalWidth), height: CGFloat(usedHeight)))
+        
+        return finalContext.makeImage() ?? croppedBuffer
     }
 }
