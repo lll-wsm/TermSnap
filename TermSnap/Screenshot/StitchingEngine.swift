@@ -9,26 +9,26 @@ enum StitchingPhase {
 }
 
 class StitchingEngine {
-    private var baselineFrame: CGImage?
-    private var lastFrame: CGImage?
-    private var phase: StitchingPhase = .baseline
+    internal var baselineFrame: CGImage?
+    internal var lastFrame: CGImage?
+    internal var phase: StitchingPhase = .baseline
     
     // Original frame dimensions
-    private var frameWidth: Int = 0
-    private var frameHeight: Int = 0
+    internal var frameWidth: Int = 0
+    internal var frameHeight: Int = 0
     
     // The exact verified scrolling area bounds (relative to the frame)
-    private var finalCropRect: CGRect?
+    internal var finalCropRect: CGRect?
 
     // Persistent buffer context
-    private var bufferContext: CGContext?
-    private let bufferMaxHeight: Int = 20000
+    internal var bufferContext: CGContext?
+    internal let bufferMaxHeight: Int = 20000
 
     // Virtual document space
-    private let initialY: Double = 10000
-    private var minY: Double = 10000
-    private var maxY: Double = 10000
-    private var currentOffset: Double = 10000
+    internal let initialY: Double = 10000
+    internal var minY: Double = 10000
+    internal var maxY: Double = 10000
+    internal var currentOffset: Double = 10000
 
     var lastDy: Double = 0
     private var accumulatedDy: Double = 0
@@ -176,7 +176,7 @@ class StitchingEngine {
 
     // MARK: - Buffer drawing
 
-    private func setupBuffer(width: Int, height: Int) {
+    internal func setupBuffer(width: Int, height: Int) {
         bufferContext = CGContext(
             data: nil,
             width: width, height: height,
@@ -189,7 +189,7 @@ class StitchingEngine {
         bufferContext?.fill(CGRect(x: 0, y: 0, width: width, height: height))
     }
 
-    private func drawInBuffer(_ image: CGImage, at virtualY: Double, height: Double) {
+    internal func drawInBuffer(_ image: CGImage, at virtualY: Double, height: Double) {
         guard let ctx = bufferContext else { return }
         let destY = Double(bufferMaxHeight) - virtualY - height
         ctx.setBlendMode(.normal)
