@@ -34,17 +34,23 @@ struct MotionDifferencingEngine {
         
         let absDy = abs(dy)
         
+        // Reusable buffers for MSE calculation to avoid row-level allocations
+        let floatCount = width * 4
+        var bufferA = [Float](repeating: 0, count: floatCount)
+        var bufferB = [Float](repeating: 0, count: floatCount)
+        var bufferC = [Float](repeating: 0, count: floatCount)
+        
         // Process row by row
         for y in 0..<height {
             // If the shifted row is out of bounds, we can't test it for motion.
             // But we can test if it's static.
             let shiftedY = dy > 0 ? y + absDy : y - absDy
             
-            let staticError = computeMSE(buffer1: currBuffer, row1: y, buffer2: baseBuffer, row2: y, width: width)
+            let staticError = computeMSE(buffer1: currBuffer, row1: y, buffer2: baseBuffer, row2: y, width: width, temp1: &bufferA, temp2: &bufferB, temp3: &bufferC)
             let isStatic = staticError < tolerance
             
             if shiftedY >= 0 && shiftedY < height {
-                let movingError = computeMSE(buffer1: currBuffer, row1: y, buffer2: baseBuffer, row2: shiftedY, width: width)
+                let movingError = computeMSE(buffer1: currBuffer, row1: y, buffer2: baseBuffer, row2: shiftedY, width: width, temp1: &bufferA, temp2: &bufferB, temp3: &bufferC)
                 let isMoving = movingError < tolerance
                 
                 // If it matches the shifted row better than the static row, it's content
@@ -109,7 +115,7 @@ struct MotionDifferencingEngine {
         return buffer
     }
     
-    private static func computeMSE(buffer1: vImage_Buffer, row1: Int, buffer2: vImage_Buffer, row2: Int, width: Int) -> Float {
+    private static func computeMSE(buffer1: vImage_Buffer, row1: Int, buffer2: vImage_Buffer, row2: Int, width: Int, temp1: inout [Float], temp2: inout [Float], temp3: inout [Float]) -> Float {
         // Fast MSE using vDSP on 8-bit ARGB data treated as floats
         let bytesPerRow1 = buffer1.rowBytes
         let bytesPerRow2 = buffer2.rowBytes
@@ -119,26 +125,24 @@ struct MotionDifferencingEngine {
         
         // Convert to float arrays for vDSP
         let count = width * 4 // 4 channels
-        var floatArr1 = [Float](repeating: 0, count: count)
-        var floatArr2 = [Float](repeating: 0, count: count)
         
-        vDSP_vfltu8(ptr1, 1, &floatArr1, 1, vDSP_Length(count))
-        vDSP_vfltu8(ptr2, 1, &floatArr2, 1, vDSP_Length(count))
+        vDSP_vfltu8(ptr1, 1, &temp1, 1, vDSP_Length(count))
+        vDSP_vfltu8(ptr2, 1, &temp2, 1, vDSP_Length(count))
         
         // Normalize to 0.0 - 1.0
         var divisor: Float = 255.0
-        vDSP_vsdiv(floatArr1, 1, &divisor, &floatArr1, 1, vDSP_Length(count))
-        vDSP_vsdiv(floatArr2, 1, &divisor, &floatArr2, 1, vDSP_Length(count))
+        vDSP_vsdiv(temp1, 1, &divisor, &temp1, 1, vDSP_Length(count))
+        vDSP_vsdiv(temp2, 1, &divisor, &temp2, 1, vDSP_Length(count))
         
         // Calculate MSE: sum((a - b)^2) / count
-        var subArr = [Float](repeating: 0, count: count)
-        vDSP_vsub(floatArr2, 1, floatArr1, 1, &subArr, 1, vDSP_Length(count)) // a - b
+        vDSP_vsub(temp2, 1, temp1, 1, &temp3, 1, vDSP_Length(count)) // a - b
         
-        var squareArr = [Float](repeating: 0, count: count)
-        vDSP_vsq(subArr, 1, &squareArr, 1, vDSP_Length(count)) // (a - b)^2
+        // We reuse temp2 for squares to save one more buffer if we wanted, 
+        // but for clarity we used 3 buffers in the call.
+        vDSP_vsq(temp3, 1, &temp3, 1, vDSP_Length(count)) // (a - b)^2
         
         var sum: Float = 0
-        vDSP_sve(squareArr, 1, &sum, vDSP_Length(count))
+        vDSP_sve(temp3, 1, &sum, vDSP_Length(count))
         
         return sum / Float(count)
     }
