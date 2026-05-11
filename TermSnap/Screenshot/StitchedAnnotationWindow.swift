@@ -150,6 +150,10 @@ class StitchedAnnotationWindow: NSWindow {
         onDeactivate = nil
     }
 
+    override func close() {
+        closeWindow() // red X → full cleanup
+    }
+
     override func keyDown(with event: NSEvent) {
         if event.keyCode == 53 { // Esc
             closeWindow()

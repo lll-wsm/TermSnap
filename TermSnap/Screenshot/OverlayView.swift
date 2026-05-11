@@ -59,6 +59,8 @@ class OverlayView: NSView {
     private var previewPanel: ScrollingPreviewPanel?
     private var borderWindow: NSWindow?
     private var captureTask: Task<Void, Never>?
+    private var scrollEventMonitor: Any?
+    private var totalScrollDeltaY: Double = 0
 
     init(frame: NSRect, screen: NSScreen, display: SCDisplay, windows: [SCWindow], backgroundImage: NSImage, backgroundCGImage: CGImage, mode: CaptureMode, captureEngine: CaptureEngine?) {
         self.screen = screen
@@ -291,9 +293,18 @@ class OverlayView: NSView {
 
     private func findTopmostWindow(at point: NSPoint) -> SCWindow? {
         let sckPoint = convertToSCK(point)
-        return windows.first { window in
-            window.frame.contains(sckPoint)
-        }
+        let matching = windows.filter { $0.frame.contains(sckPoint) }
+        guard matching.count > 1 else { return matching.first }
+
+        // Resolve z-order via CGWindowList (returns front-to-back).
+        let infos = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
+        let orderedIDs = infos.compactMap { $0[kCGWindowNumber as String] as? Int }
+
+        return matching.min(by: { a, b in
+            let idxA = orderedIDs.firstIndex(of: Int(a.windowID)) ?? Int.max
+            let idxB = orderedIDs.firstIndex(of: Int(b.windowID)) ?? Int.max
+            return idxA < idxB
+        })
     }
 
     /// Finds the SCWindow most closely matching a selection rect (used when
@@ -528,6 +539,7 @@ class OverlayView: NSView {
     private func enterScrollingState(with rect: NSRect) {
         state = .scrolling
         currentRect = rect
+        isFinishingScrolling = false
         stitchingEngine.reset()
 
         // Capture the display rect in SCK coords (Top-Left global)
@@ -569,6 +581,14 @@ class OverlayView: NSView {
         preview.orderFront(nil)
         previewPanel = preview
 
+        // Monitor scroll wheel events to provide a ground-truth dy fallback
+        // when image-based registration (Vision, correlation) fails on uniform content.
+        // Uses scrollingDeltaY (pixel-precise) rather than deltaY (line-based).
+        totalScrollDeltaY = 0
+        scrollEventMonitor = NSEvent.addGlobalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
+            self?.totalScrollDeltaY += Double(event.scrollingDeltaY)
+        }
+
         captureTask = Task {
             guard let engine = captureEngine else {
                 NSLog("TermSnap: No captureEngine")
@@ -580,16 +600,28 @@ class OverlayView: NSView {
                 // Exclude our own UI from the capture stream
                 let excludeWindows = [previewPanel, borderWindow].compactMap { $0 }
                 let stream = try await engine.startStream(display: display, area: captureArea, excluding: excludeWindows)
-                
+
                 NSLog("TermSnap: Stream started, waiting for frames, captureArea=\(captureArea)")
                 var frameCount = 0
-                
+
                 for await frame in stream {
                     if state != .scrolling { break }
                     frameCount += 1
-                    
+
+                    // Pass cumulative scroll displacement to engine as fallback hint
+                    stitchingEngine.hintedDy = totalScrollDeltaY
+
                     if let result = await stitchingEngine.addFrame(frame) {
                         previewPanel?.updateImage(result, lastDy: stitchingEngine.lastDy, frameCount: frameCount, area: captureArea, rawFrame: frame)
+                    }
+
+                    // Auto-finish when frames stop changing (user reached scroll boundary or paused)
+                    if stitchingEngine.shouldAutoFinish {
+                        NSLog("TermSnap: Auto-finishing after \(stitchingEngine.idleFrameCount) idle frames")
+                        await MainActor.run { [weak self] in
+                            self?.finishScrolling()
+                        }
+                        break
                     }
                 }
                 NSLog("TermSnap: Stream ended after \(frameCount) frames")
@@ -630,7 +662,18 @@ class OverlayView: NSView {
         borderWindow = borderWin
     }
 
+    private var isFinishingScrolling = false
+
     func finishScrolling() {
+        guard !isFinishingScrolling, state == .scrolling else { return }
+        isFinishingScrolling = true
+        state = .annotating // prevent global/local Enter monitors from re-triggering
+
+        if let monitor = scrollEventMonitor {
+            NSEvent.removeMonitor(monitor)
+            scrollEventMonitor = nil
+        }
+
         previewPanel?.orderOut(nil)
         previewPanel = nil
         borderWindow?.orderOut(nil)
@@ -691,6 +734,10 @@ class OverlayView: NSView {
 
     @objc func cancel() {
         if state == .scrolling {
+            if let monitor = scrollEventMonitor {
+                NSEvent.removeMonitor(monitor)
+                scrollEventMonitor = nil
+            }
             captureTask?.cancel()
             captureTask = nil
             previewPanel?.orderOut(nil)

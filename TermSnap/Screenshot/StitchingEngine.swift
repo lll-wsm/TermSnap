@@ -1,6 +1,9 @@
 import Vision
 import CoreGraphics
 import AppKit
+import OSLog
+
+fileprivate let stitchingLog = Logger(subsystem: "com.lll.TermSnap", category: "Stitching")
 
 enum StitchingPhase {
     case baseline
@@ -44,6 +47,20 @@ class StitchingEngine {
     var lastDy: Double = 0
     private var accumulatedDy: Double = 0
     private var frameCount = 0
+    private var noMotionFrameCount = 0
+
+    /// External scroll hint from CGEvent monitoring — cumulative scrollingDeltaY since capture start.
+    /// Set by OverlayView to provide ground-truth scroll displacement
+    /// when image-based methods (Vision, correlation) fail on uniform content.
+    var hintedDy: Double = 0
+    private var lastHintedDy: Double = 0
+
+    /// Number of consecutive frames with no detectable displacement.
+    /// When this exceeds the threshold, scrolling has likely stopped.
+    private(set) var idleFrameCount: Int = 0
+
+    /// True when enough idle frames have passed to auto-finish the capture.
+    var shouldAutoFinish: Bool { idleFrameCount >= 20 }
 
     func reset() {
         bufferContext = nil
@@ -64,6 +81,10 @@ class StitchingEngine {
         lastDy = 0
         accumulatedDy = 0
         frameCount = 0
+        noMotionFrameCount = 0
+        hintedDy = 0
+        lastHintedDy = 0
+        idleFrameCount = 0
     }
 
     func addFrame(_ newFrame: CGImage) async -> CGImage? {
@@ -72,6 +93,7 @@ class StitchingEngine {
 
         switch phase {
         case .baseline:
+            stitchingLog.notice("BASELINE: capturing first frame (w=\(newFrame.width) h=\(newFrame.height))")
             self.frameWidth = newFrame.width
             self.frameHeight = newFrame.height
             setupBuffer(width: newFrame.width, height: bufferMaxHeight)
@@ -90,20 +112,31 @@ class StitchingEngine {
             do {
                 try handler.perform([registrationRequest])
                 guard let observation = registrationRequest.results?.first as? VNImageTranslationAlignmentObservation else {
+                    noMotionFrameCount += 1
+                    stitchingLog.info("Vision returned nil observation (#\(self.noMotionFrameCount))")
                     self.lastFrame = newFrame
                     return finalize()
                 }
 
                 let transform = observation.alignmentTransform
-                // ty > 0 means content shifted UP relative to last in Vision (Y-up)
-                // In Top-Down (Y-down), this means document content is moving UP
-                // which is Scrolling DOWN. So rawDy > 0 = Scrolling DOWN.
                 let rawDy = Double(transform.ty)
                 self.accumulatedDy += rawDy
                 let totalDy = Int(round(self.accumulatedDy))
 
+                // Track frames where Vision reports negligible motion.
+                if abs(rawDy) < 1 {
+                    noMotionFrameCount += 1
+                } else {
+                    noMotionFrameCount = 0
+                }
+
+                self.frameCount += 1
+                stitchingLog.debug("Frame #\(self.frameCount): rawDy=\(String(format: "%.1f", rawDy)) totalDy=\(totalDy) noMotionFrames=\(self.noMotionFrameCount)")
+
                 if abs(totalDy) >= 5 {
+                    stitchingLog.info("totalDy threshold reached, calling detectContentRect with dy=\(totalDy)")
                     if let bounds = MotionDifferencingEngine.detectContentRect(baseline: baseline, current: newFrame, dy: totalDy) {
+                        stitchingLog.info("Content rect detected via motion: topY=\(bounds.topY) bottomY=\(bounds.bottomY)")
                         let topY = max(0, bounds.topY - 10)
                         let bottomY = min(Int(frameH) - 1, bounds.bottomY + 10)
                         let cropH = bottomY - topY + 1
@@ -117,7 +150,6 @@ class StitchingEngine {
                             self.currentOffset = initialY
                             self.maxY = initialY + Double(cropH)
 
-                            // Initialize chrome frame tracking
                             self.topFrame = baseline
                             self.bottomFrame = baseline
                             self.headerBoundary = initialY
@@ -129,10 +161,52 @@ class StitchingEngine {
                         self.phase = .stableStitching
                         self.lastFrame = baseline
                         self.accumulatedDy = 0
+                        noMotionFrameCount = 0
                         return await addFrame(newFrame)
                     }
+                    stitchingLog.info("detectContentRect with dy=\(totalDy) returned nil")
                 }
-            } catch { }
+
+                // Fallback: after ~0.5s of frames with no detectable motion,
+                // try brightness-based detection directly.
+                if noMotionFrameCount >= 15 {
+                    stitchingLog.info("No-motion fallback triggered after \(self.noMotionFrameCount) frames, trying brightness detection")
+                    if let bounds = MotionDifferencingEngine.detectContentRect(baseline: baseline, current: newFrame, dy: 0) {
+                        stitchingLog.info("Content rect detected via brightness fallback: topY=\(bounds.topY) bottomY=\(bounds.bottomY)")
+                        let topY = max(0, bounds.topY - 10)
+                        let bottomY = min(Int(frameH) - 1, bounds.bottomY + 10)
+                        let cropH = bottomY - topY + 1
+
+                        self.finalCropRect = CGRect(x: 0, y: CGFloat(topY), width: CGFloat(frameW), height: CGFloat(cropH))
+
+                        if let crop = self.finalCropRect,
+                           let croppedBaseline = baseline.cropping(to: crop) {
+
+                            self.minY = initialY
+                            self.currentOffset = initialY
+                            self.maxY = initialY + Double(cropH)
+
+                            self.topFrame = baseline
+                            self.bottomFrame = baseline
+                            self.headerBoundary = initialY
+                            self.footerBoundary = initialY
+
+                            drawInBuffer(croppedBaseline, at: currentOffset, height: Double(cropH))
+                        }
+
+                        self.phase = .stableStitching
+                        self.lastFrame = baseline
+                        self.accumulatedDy = 0
+                        noMotionFrameCount = 0
+                        return await addFrame(newFrame)
+                    }
+                    stitchingLog.warning("detectContentRect with dy=0 (brightness fallback) also returned nil")
+                    noMotionFrameCount = 0
+                }
+            } catch {
+                noMotionFrameCount += 1
+                stitchingLog.error("Vision registration threw error: \(error.localizedDescription) (#\(self.noMotionFrameCount))")
+            }
 
             lastFrame = newFrame
             return finalize()
@@ -141,62 +215,113 @@ class StitchingEngine {
             guard let last = lastFrame, let cropRect = finalCropRect else { return finalize() }
             if newFrame.width != last.width { return finalize() }
 
-            let handler = VNImageRequestHandler(cgImage: last, options: [:])
-            let registrationRequest = VNTranslationalImageRegistrationRequest(targetedCGImage: newFrame)
+            // Crop to content area so registration only sees the moving content,
+            // not the static chrome (title bar, toolbar) that dominates feature
+            // matching when content is uniform (e.g. white webpage in dark-mode).
+            let croppedLast = last.cropping(to: cropRect)
+            let croppedNew = newFrame.cropping(to: cropRect)
+            let contentLast = croppedLast ?? last
+            let contentNew = croppedNew ?? newFrame
+
+            // ── Step 1: Try Vision feature-based registration ──
+            var detectedDy: Int?
+            var dySource = "none"
+            let handler = VNImageRequestHandler(cgImage: contentLast, options: [:])
+            let registrationRequest = VNTranslationalImageRegistrationRequest(targetedCGImage: contentNew)
 
             do {
                 try handler.perform([registrationRequest])
-                guard let observation = registrationRequest.results?.first as? VNImageTranslationAlignmentObservation else {
-                    return finalize()
-                }
+                if let observation = registrationRequest.results?.first as? VNImageTranslationAlignmentObservation {
+                    let rawDy = Double(observation.alignmentTransform.ty)
+                    self.lastDy = rawDy
+                    let accumulated = self.accumulatedDy + rawDy
+                    let dy = Int(round(accumulated))
 
-                let transform = observation.alignmentTransform
-                let rawDy = Double(transform.ty)
-                self.lastDy = rawDy
-                self.accumulatedDy += rawDy
-                frameCount += 1
-
-                let dy = Int(round(accumulatedDy))
-                if abs(dy) == 0 { return finalize() }
-
-                if abs(dy) > Int(frameH / 2) {
-                    lastFrame = newFrame
-                    accumulatedDy = 0
-                    return finalize()
-                }
-
-                accumulatedDy -= Double(dy)
-                currentOffset += Double(dy)
-
-                if let croppedNewFrame = newFrame.cropping(to: cropRect) {
-                    drawInBuffer(croppedNewFrame, at: currentOffset, height: Double(cropRect.height))
-
-                    // ── Buffer crop range tracking ──
-                    if currentOffset < minY {
-                        minY = currentOffset
-                    }
-                    let frameBottom = currentOffset + Double(cropRect.height)
-                    if frameBottom > maxY {
-                        maxY = frameBottom
-                    }
-
-                    // ── Header/footer frame tracking (independent from buffer positioning) ──
-                    // currentOffset DECREASES on downward scroll, so HIGHER currentOffset
-                    // means closer to document TOP → header source.
-                    if currentOffset > headerBoundary {
-                        headerBoundary = currentOffset
-                        topFrame = newFrame
-                    }
-                    // LOWER currentOffset means closer to document BOTTOM → footer source.
-                    if currentOffset < footerBoundary {
-                        footerBoundary = currentOffset
-                        bottomFrame = newFrame
+                    if abs(dy) > 0 {
+                        detectedDy = dy
+                        dySource = "vision"
+                        self.accumulatedDy = accumulated
                     }
                 }
+            } catch {
+                stitchingLog.debug("StableStitch: Vision threw error: \(error.localizedDescription)")
+            }
 
-                lastFrame = newFrame
+            // ── Step 2: Fallback to row-signature correlation ──
+            if detectedDy == nil {
+                if let corrDy = MotionDifferencingEngine.detectDisplacement(
+                    baseline: contentLast,
+                    current: contentNew,
+                    maxDisplacement: 80
+                ) {
+                    self.accumulatedDy += Double(corrDy)
+                    let dy = Int(round(self.accumulatedDy))
+                    if abs(dy) > 0 {
+                        detectedDy = dy
+                        dySource = "correlation"
+                    }
+                }
+            }
+
+            // ── Step 3: Last-resort fallback to cumulative scroll displacement ──
+            // Only trust scroll events if frames actually differ (browser may be
+            // at scroll boundary where events fire but content doesn't change).
+            if detectedDy == nil {
+                let delta = self.hintedDy - self.lastHintedDy
+                self.lastHintedDy = self.hintedDy
+                if abs(delta) > 0.5,
+                   !MotionDifferencingEngine.areFramesNearlyIdentical(contentLast, contentNew) {
+                    self.accumulatedDy += delta
+                    let dy = Int(round(self.accumulatedDy))
+                    if abs(dy) > 0 {
+                        detectedDy = dy
+                        dySource = "scrollEvent"
+                    }
+                }
+            }
+
+            guard let dy = detectedDy else {
+                idleFrameCount += 1
                 return finalize()
-            } catch { }
+            }
+
+            idleFrameCount = 0
+            frameCount += 1
+
+            if abs(dy) > Int(frameH / 2) {
+                stitchingLog.info("StableStitch: dy too large (\(dy) > \(Int(frameH/2))), resetting")
+                lastFrame = newFrame
+                accumulatedDy = 0
+                return finalize()
+            }
+
+            accumulatedDy -= Double(dy)
+            currentOffset += Double(dy)
+
+            stitchingLog.debug("StableStitch #\(self.frameCount): dy=\(dy) source=\(dySource) offset=\(String(format: "%.0f", self.currentOffset))")
+
+            if let croppedNewFrame = newFrame.cropping(to: cropRect) {
+                drawInBuffer(croppedNewFrame, at: currentOffset, height: Double(cropRect.height))
+
+                if currentOffset < minY {
+                    minY = currentOffset
+                }
+                let frameBottom = currentOffset + Double(cropRect.height)
+                if frameBottom > maxY {
+                    maxY = frameBottom
+                }
+
+                if currentOffset > headerBoundary {
+                    headerBoundary = currentOffset
+                    topFrame = newFrame
+                }
+                if currentOffset < footerBoundary {
+                    footerBoundary = currentOffset
+                    bottomFrame = newFrame
+                }
+            }
+
+            lastFrame = newFrame
             return finalize()
         }
     }
