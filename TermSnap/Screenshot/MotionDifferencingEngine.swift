@@ -8,9 +8,8 @@ struct MotionDifferencingEngine {
     /// - Parameters:
     ///   - baseline: The initial frame.
     ///   - current: The current frame after scrolling.
-    ///   - dy: The vertical displacement in pixels. Positive means content moved UP relative to the window (i.e. user scrolled DOWN).
-    ///   - hintRect: Optional initial rect from Accessibility.
-    /// - Returns: The precise (topY, bottomY) of the scrolling content area, or nil if detection fails.
+    ///   - dy: The vertical displacement (Top-Down: > 0 means scrolled DOWN).
+    ///   - hintRect: Optional hint for localizing search.
     static func detectContentRect(baseline: CGImage, current: CGImage, dy: Int, hintRect: CGRect? = nil) -> (topY: Int, bottomY: Int)? {
         guard dy != 0 else { return nil }
         
@@ -18,33 +17,29 @@ struct MotionDifferencingEngine {
         let height = baseline.height
         guard width == current.width, height == current.height else { return nil }
         
+        // Use vImage for efficient pixel access
         guard let baseBuffer = vImageBuffer(cgImage: baseline),
-              let currBuffer = vImageBuffer(cgImage: current) else {
-            return nil
-        }
+              let currBuffer = vImageBuffer(cgImage: current) else { return nil }
         
         defer {
             free(baseBuffer.data)
             free(currBuffer.data)
         }
         
-        // Configuration
-        let tolerance: Float = 0.05 // 5% MSE tolerance
+        let count = width * 4
+        var bufferA = [Float](repeating: 0, count: count)
+        var bufferB = [Float](repeating: 0, count: count)
+        var bufferC = [Float](repeating: 0, count: count)
+        
+        // Track which rows exhibit motion that matches dy
         var isContent = [Bool](repeating: false, count: height)
+        let tolerance: Float = 0.05 // 5% MSE tolerance
         
-        let absDy = abs(dy)
-        
-        // Reusable buffers for MSE calculation to avoid row-level allocations
-        let floatCount = width * 4
-        var bufferA = [Float](repeating: 0, count: floatCount)
-        var bufferB = [Float](repeating: 0, count: floatCount)
-        var bufferC = [Float](repeating: 0, count: floatCount)
-        
-        // Process row by row
         for y in 0..<height {
-            // If the shifted row is out of bounds, we can't test it for motion.
-            // But we can test if it's static.
-            let shiftedY = dy > 0 ? y + absDy : y - absDy
+            // SHIFT FIX: 
+            // In Top-Down, if we scrolled DOWN (dy > 0), the current row 'y' 
+            // matched the baseline row 'y - dy'.
+            let shiftedY = y - dy
             
             let staticError = computeMSE(buffer1: currBuffer, row1: y, buffer2: baseBuffer, row2: y, width: width, temp1: &bufferA, temp2: &bufferB, temp3: &bufferC)
             let isStatic = staticError < tolerance
@@ -89,46 +84,49 @@ struct MotionDifferencingEngine {
     // MARK: - Helpers
     
     private static func vImageBuffer(cgImage: CGImage) -> vImage_Buffer? {
+        let width = cgImage.width
+        let height = cgImage.height
+        let bitmapInfo = CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
+        
+        var buffer = vImage_Buffer()
         var format = vImage_CGImageFormat(
             bitsPerComponent: 8,
             bitsPerPixel: 32,
             colorSpace: nil,
-            bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue),
+            bitmapInfo: CGBitmapInfo(rawValue: bitmapInfo),
             version: 0,
             decode: nil,
             renderingIntent: .defaultIntent
         )
         
-        var buffer = vImage_Buffer()
-        let err = vImageBuffer_InitWithCGImage(&buffer, &format, nil, cgImage, vImage_Flags(kvImageNoFlags))
-        guard err == kvImageNoError else { return nil }
+        guard vImageBuffer_InitWithCGImage(&buffer, &format, nil, cgImage, vImage_Flags(kvImageNoFlags)) == kvImageNoError else {
+            return nil
+        }
+        
         return buffer
     }
     
     private static func computeMSE(buffer1: vImage_Buffer, row1: Int, buffer2: vImage_Buffer, row2: Int, width: Int, temp1: inout [Float], temp2: inout [Float], temp3: inout [Float]) -> Float {
-        // Fast MSE using vDSP on 8-bit ARGB data treated as floats
-        let bytesPerRow1 = buffer1.rowBytes
-        let bytesPerRow2 = buffer2.rowBytes
+        let p1 = buffer1.data.advanced(by: row1 * buffer1.rowBytes).assumingMemoryBound(to: UInt8.self)
+        let p2 = buffer2.data.advanced(by: row2 * buffer2.rowBytes).assumingMemoryBound(to: UInt8.self)
         
-        let ptr1 = buffer1.data.advanced(by: row1 * bytesPerRow1).assumingMemoryBound(to: UInt8.self)
-        let ptr2 = buffer2.data.advanced(by: row2 * bytesPerRow2).assumingMemoryBound(to: UInt8.self)
+        let count = width * 4
         
-        // Convert to float arrays for vDSP
-        let count = width * 4 // 4 channels
+        // Convert to float
+        vDSP_vfltu8(p1, 1, &temp1, 1, vDSP_Length(count))
+        vDSP_vfltu8(p2, 1, &temp2, 1, vDSP_Length(count))
         
-        vDSP_vfltu8(ptr1, 1, &temp1, 1, vDSP_Length(count))
-        vDSP_vfltu8(ptr2, 1, &temp2, 1, vDSP_Length(count))
+        // Scale to 0..1
+        var scale: Float = 1.0 / 255.0
+        vDSP_vsmul(temp1, 1, &scale, &temp1, 1, vDSP_Length(count))
+        vDSP_vsmul(temp2, 1, &scale, &temp2, 1, vDSP_Length(count))
         
-        // Normalize to 0.0 - 1.0
-        var divisor: Float = 255.0
-        vDSP_vsdiv(temp1, 1, &divisor, &temp1, 1, vDSP_Length(count))
-        vDSP_vsdiv(temp2, 1, &divisor, &temp2, 1, vDSP_Length(count))
+        // Difference
+        vDSP_vsub(temp1, 1, temp2, 1, &temp3, 1, vDSP_Length(count))
         
-        // Calculate MSE: sum((a - b)^2) / count
-        vDSP_vsub(temp2, 1, temp1, 1, &temp3, 1, vDSP_Length(count)) // a - b
-        
-        // We reuse temp2 for squares to save one more buffer if we wanted, 
-        // but for clarity we used 3 buffers in the call.
+        // Square and sum
+        // Optimization: Use vDSP_vsq for squaring. Note that vDSP_vsq was used in the previous logic.
+        // Let's use 3 buffers in the call.
         vDSP_vsq(temp3, 1, &temp3, 1, vDSP_Length(count)) // (a - b)^2
         
         var sum: Float = 0
