@@ -35,6 +35,12 @@ class StitchingEngine {
     internal var maxY: Double = 10000
     private var currentOffset: Double = 10000
 
+    // Independent header/footer frame tracking (decoupled from buffer positioning).
+    // With current dy convention, downward scroll → currentOffset DECREASES,
+    // so HIGHER currentOffset = closer to document TOP.
+    private var headerBoundary: Double = 10000   // highest currentOffset seen → document top
+    private var footerBoundary: Double = 10000   // lowest currentOffset seen → document bottom
+
     var lastDy: Double = 0
     private var accumulatedDy: Double = 0
     private var frameCount = 0
@@ -53,6 +59,8 @@ class StitchingEngine {
         minY = initialY
         maxY = initialY
         currentOffset = initialY
+        headerBoundary = initialY
+        footerBoundary = initialY
         lastDy = 0
         accumulatedDy = 0
         frameCount = 0
@@ -109,9 +117,11 @@ class StitchingEngine {
                             self.currentOffset = initialY
                             self.maxY = initialY + Double(cropH)
 
-                            // Initialize chrome frames
+                            // Initialize chrome frame tracking
                             self.topFrame = baseline
                             self.bottomFrame = baseline
+                            self.headerBoundary = initialY
+                            self.footerBoundary = initialY
 
                             drawInBuffer(croppedBaseline, at: currentOffset, height: Double(cropH))
                         }
@@ -161,15 +171,25 @@ class StitchingEngine {
                 if let croppedNewFrame = newFrame.cropping(to: cropRect) {
                     drawInBuffer(croppedNewFrame, at: currentOffset, height: Double(cropRect.height))
 
-                    // Track which frame represents the Top/Bottom of the virtual document
+                    // ── Buffer crop range tracking ──
                     if currentOffset < minY {
                         minY = currentOffset
-                        topFrame = newFrame
                     }
-
                     let frameBottom = currentOffset + Double(cropRect.height)
                     if frameBottom > maxY {
                         maxY = frameBottom
+                    }
+
+                    // ── Header/footer frame tracking (independent from buffer positioning) ──
+                    // currentOffset DECREASES on downward scroll, so HIGHER currentOffset
+                    // means closer to document TOP → header source.
+                    if currentOffset > headerBoundary {
+                        headerBoundary = currentOffset
+                        topFrame = newFrame
+                    }
+                    // LOWER currentOffset means closer to document BOTTOM → footer source.
+                    if currentOffset < footerBoundary {
+                        footerBoundary = currentOffset
                         bottomFrame = newFrame
                     }
                 }
