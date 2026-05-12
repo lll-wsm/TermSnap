@@ -500,10 +500,10 @@ class OverlayView: NSView {
             bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
         ) else { return nil }
 
-        // 1. Draw background (Original context is bottom-left, keeps CGImage upright)
+        // 1. Draw background at full 2x resolution (points * backingScale)
         ctx.draw(cropped, in: CGRect(x: 0, y: 0, width: CGFloat(pixelWidth), height: CGFloat(pixelHeight)))
 
-        // 2. Transform for annotations (Top-left origin)
+        // 2. Draw annotations scaled to match the 2x pixel space
         ctx.saveGState()
         ctx.translateBy(x: 0, y: CGFloat(pixelHeight))
         ctx.scaleBy(x: 1, y: -1)
@@ -514,8 +514,23 @@ class OverlayView: NSView {
         }
         ctx.restoreGState()
 
-        guard let outputImage = ctx.makeImage() else { return nil }
-        return NSImage(cgImage: outputImage, size: NSSize(width: cropRect.width, height: cropRect.height))
+        guard let hiresOutput = ctx.makeImage() else { return nil }
+
+        // 3. Downsample to 1x with Lanczos for high-quality result.
+        //    This preserves detail from the 2x render while matching the selection dimensions.
+        let outWidth = Int(round(cropRect.width))
+        let outHeight = Int(round(cropRect.height))
+        let ciImage = CIImage(cgImage: hiresOutput)
+        let scaleFactor = CGFloat(outWidth) / CGFloat(pixelWidth)
+        guard let filter = CIFilter(name: "CILanczosScaleTransform") else { return nil }
+        filter.setValue(ciImage, forKey: kCIInputImageKey)
+        filter.setValue(scaleFactor, forKey: kCIInputScaleKey)
+        filter.setValue(1.0, forKey: kCIInputAspectRatioKey)
+        guard let scaledImage = filter.outputImage else { return nil }
+
+        let ciContext = CIContext(options: [.useSoftwareRenderer: false])
+        guard let finalImage = ciContext.createCGImage(scaledImage, from: scaledImage.extent) else { return nil }
+        return NSImage(cgImage: finalImage, size: NSSize(width: outWidth, height: outHeight))
     }
 
     @objc private func copyToClipboard() {

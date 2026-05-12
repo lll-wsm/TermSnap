@@ -94,8 +94,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 
                 clearCreateFileFlags()
                 
-                // Refresh Finder UI and select the new file
-                NSWorkspace.shared.activateFileViewerSelecting([finalDestURL])
+                // Notify Finder the directory changed so the file appears without opening a window
+                NSWorkspace.shared.noteFileSystemChanged(finalDestURL.path)
                 
             } catch {
                 os_log("TermSnap: Copy FAILED: %{public}s", log: logger, type: .error, error.localizedDescription)

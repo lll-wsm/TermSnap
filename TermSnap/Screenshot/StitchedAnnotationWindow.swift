@@ -110,10 +110,10 @@ class StitchedAnnotationWindow: NSWindow {
             bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
         ) else { return nil }
 
-        // Draw base image (bottom-left origin, CGImage draws upright)
+        // 1. Draw base image at full 2x resolution
         ctx.draw(cgImage, in: CGRect(x: 0, y: 0, width: pixelWidth, height: pixelHeight))
 
-        // Draw annotations (top-left origin transform)
+        // 2. Draw annotations scaled to match the 2x pixel space
         ctx.saveGState()
         ctx.translateBy(x: 0, y: CGFloat(pixelHeight))
         ctx.scaleBy(x: 1, y: -1)
@@ -126,8 +126,22 @@ class StitchedAnnotationWindow: NSWindow {
         }
         ctx.restoreGState()
 
-        guard let outputImage = ctx.makeImage() else { return nil }
-        return NSImage(cgImage: outputImage, size: stitchedImage.size)
+        guard let hiresOutput = ctx.makeImage() else { return nil }
+
+        // 3. Downsample to 1x with Lanczos for high-quality result
+        let outWidth = Int(round(stitchedImage.size.width))
+        let outHeight = Int(round(stitchedImage.size.height))
+        let ciImage = CIImage(cgImage: hiresOutput)
+        let scaleFactor = CGFloat(outWidth) / CGFloat(pixelWidth)
+        guard let filter = CIFilter(name: "CILanczosScaleTransform") else { return nil }
+        filter.setValue(ciImage, forKey: kCIInputImageKey)
+        filter.setValue(scaleFactor, forKey: kCIInputScaleKey)
+        filter.setValue(1.0, forKey: kCIInputAspectRatioKey)
+        guard let scaledImage = filter.outputImage else { return nil }
+
+        let ciContext = CIContext(options: [.useSoftwareRenderer: false])
+        guard let finalImage = ciContext.createCGImage(scaledImage, from: scaledImage.extent) else { return nil }
+        return NSImage(cgImage: finalImage, size: NSSize(width: outWidth, height: outHeight))
     }
 
     @objc private func copyToClipboard() {
