@@ -16,7 +16,7 @@ enum AnnotationTool: String, CaseIterable {
         case .arrow: return "arrowshape.right"
         case .line: return "line.diagonal"
         case .pen: return "pencil.tip"
-        case .text: return "textformat"
+        case .text: return "text.cursor"
         case .mosaic: return "square.grid.3x3.fill"
         }
     }

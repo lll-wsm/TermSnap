@@ -17,7 +17,7 @@ class StitchedAnnotationWindow: NSWindow {
         let screenRect = screen.visibleFrame
         
         // Window width: 1:1 with image width, but ensure it fits on screen and fits toolbar (min 850)
-        let winWidth = max(850, min(image.size.width, screenRect.width - 40))
+        let winWidth = max(650, min(image.size.width, screenRect.width - 40))
         
         // Window height: Image height + Toolbar space (approx 80), up to 90% of screen height
         let winHeight = min(image.size.height + 100, screenRect.height * 0.9)

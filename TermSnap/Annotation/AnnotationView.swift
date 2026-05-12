@@ -85,13 +85,10 @@ class AnnotationView: NSView, NSTextFieldDelegate {
         let font = NSFont.systemFont(ofSize: fontSize, weight: .bold)
         let lineHeight = font.boundingRectForFont.height
 
-        // Wrap NSTextField in an unflipped container so text renders correctly
+        // Wrap NSTextField in a container so text renders correctly
         // inside our flipped (top-left origin) view.
         let container = NSView(frame: NSRect(x: point.x, y: point.y, width: 60, height: lineHeight + 6))
         container.wantsLayer = true
-        container.layer?.borderColor = currentColor.withAlphaComponent(0.4).cgColor
-        container.layer?.borderWidth = 1
-        container.layer?.cornerRadius = 3
 
         let field = NSTextField(frame: NSRect(x: 3, y: 0, width: 54, height: lineHeight + 6))
         field.isBordered = false

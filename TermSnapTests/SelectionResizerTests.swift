@@ -50,9 +50,9 @@ struct SelectionResizerTests {
         #expect(cursor == .crosshair)
     }
 
-    @Test func cursorInsideReturnsOpenHand() {
+    @Test func cursorInsideReturnsArrow() {
         let cursor = resizer.cursorAt(NSPoint(x: 150, y: 150))
-        #expect(cursor == .openHand)
+        #expect(cursor == .arrow)
     }
 
     @Test func handleDetectionOnLeftEdge() {
