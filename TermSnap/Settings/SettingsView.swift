@@ -115,18 +115,81 @@ struct ScreenshotSettingsView: View {
 // MARK: - Context Menu Settings
 
 struct ContextMenuSettingsView: View {
+    @StateObject private var templateManager = TemplateManager.shared
+    @State private var enabledTemplates = AppSettings.enabledTemplates
+    @State private var showTerminalMenu = AppSettings.showTerminalMenu
+    @State private var showCreateFileMenu = AppSettings.showCreateFileMenu
+    @State private var menuLayout = AppSettings.menuLayout
+    @State private var showTemplateIcons = AppSettings.showTemplateIcons
     @State private var showFinderIcon = AppSettings.showFinderIcon
 
     var body: some View {
         Form {
             Section {
                 Toggle(NSLocalizedString("Show Icon in Context Menu", comment: ""), isOn: $showFinderIcon)
+                
+                Picker(NSLocalizedString("Menu Layout", comment: ""), selection: $menuLayout) {
+                    Text(NSLocalizedString("Flat", comment: "")).tag("flat")
+                    Text(NSLocalizedString("Nested", comment: "")).tag("nested")
+                }
+                .pickerStyle(.segmented)
+                
+                Toggle(NSLocalizedString("Show Icons for Templates", comment: ""), isOn: $showTemplateIcons)
             } header: {
-                Label(NSLocalizedString("Finder Extension", comment: ""), systemImage: "macwindow")
+                Label(NSLocalizedString("Finder Integration", comment: ""), systemImage: "macwindow")
+            }
+            
+            Section {
+                Toggle(NSLocalizedString("Open Terminal Here", comment: ""), isOn: $showTerminalMenu)
+                Toggle(NSLocalizedString("Create New File (Submenu)", comment: ""), isOn: $showCreateFileMenu)
+            } header: {
+                Label(NSLocalizedString("Menu Items", comment: ""), systemImage: "list.bullet")
+            }
+            
+            if showCreateFileMenu {
+                Section {
+                    Button(NSLocalizedString("Open Templates Folder", comment: "")) {
+                        templateManager.openTemplatesFolder()
+                    }
+                    
+                    List {
+                        ForEach(templateManager.availableTemplates, id: \.self) { template in
+                            HStack {
+                                Image(nsImage: templateManager.getIcon(for: template))
+                                    .resizable()
+                                    .frame(width: 16, height: 16)
+                                Text(template.lastPathComponent)
+                                Spacer()
+                                Toggle("", isOn: Binding(
+                                    get: { enabledTemplates.contains(template.lastPathComponent) },
+                                    set: { isOn in
+                                        if isOn {
+                                            if !enabledTemplates.contains(template.lastPathComponent) {
+                                                enabledTemplates.append(template.lastPathComponent)
+                                            }
+                                        } else {
+                                            enabledTemplates.removeAll { $0 == template.lastPathComponent }
+                                        }
+                                    }
+                                )).labelsHidden()
+                            }
+                        }
+                    }
+                    .frame(minHeight: 150)
+                } header: {
+                    Text(NSLocalizedString("Enabled Templates", comment: ""))
+                } footer: {
+                    Text(NSLocalizedString("Any file in the Templates folder will appear here. Toggle to show/hide in the Finder menu.", comment: ""))
+                }
             }
         }
         .formStyle(.grouped)
         .navigationTitle(NSLocalizedString("Context Menu", comment: ""))
+        .onChange(of: enabledTemplates) { _, newValue in AppSettings.enabledTemplates = newValue }
+        .onChange(of: showTerminalMenu) { _, newValue in AppSettings.showTerminalMenu = newValue }
+        .onChange(of: showCreateFileMenu) { _, newValue in AppSettings.showCreateFileMenu = newValue }
+        .onChange(of: menuLayout) { _, newValue in AppSettings.menuLayout = newValue }
+        .onChange(of: showTemplateIcons) { _, newValue in AppSettings.showTemplateIcons = newValue }
         .onChange(of: showFinderIcon) { _, newValue in AppSettings.showFinderIcon = newValue }
     }
 }

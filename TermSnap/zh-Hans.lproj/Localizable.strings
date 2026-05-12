@@ -10,6 +10,17 @@
 "Desktop" = "桌面";
 "Choose default save location for screenshots" = "为截图选择默认保存位置";
 
+"Menu Layout" = "菜单布局";
+"Flat" = "平铺";
+"Nested" = "嵌套";
+"Show Icons for Templates" = "显示模板图标";
+"Open Terminal Here" = "在此处打开终端";
+"Create New File (Submenu)" = "新建文件 (子菜单)";
+"Menu Items" = "菜单项";
+"Open Templates Folder" = "打开模板文件夹";
+"Enabled Templates" = "已启用的模板";
+"Any file in the Templates folder will appear here. Toggle to show/hide in the Finder menu." = "模板文件夹中的任何文件都将显示在此处。切换以在 Finder 菜单中显示/隐藏。";
+
 "Take Screenshot" = "进行截图";
 "Scrolling Screenshot" = "滚动截图";
 "Enable Finder Extension" = "启用 Finder 扩展";

@@ -1,20 +1,33 @@
 import SwiftUI
+import OSLog
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     let statusBarController = StatusBarController()
-    private var terminalOpenObserver: NSObjectProtocol?
-    private let openTerminalNotificationName = Notification.Name("com.lll.TermSnap.openTerminalRequest")
-    private let directoryPathKey = "directoryPath"
-
+    
     private let sharedDefaults = UserDefaults(suiteName: "group.com.lll.TermSnap")!
-    private let triggerKey = "openTerminalTrigger"
+    private let logger = OSLog(subsystem: "com.lll.TermSnap", category: "AppDelegate")
+    private let darwinNotificationName = "com.lll.TermSnap.request"
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusBarController.setup()
-        startObservingTerminalOpenRequests()
-
-        // Check once immediately in case a request came in while app was closed
-        processLastTerminalRequest()
+        
+        // Listen for Darwin Notifications
+        let center = CFNotificationCenterGetDarwinNotifyCenter()
+        let observer = UnsafeRawPointer(Unmanaged.passUnretained(self).toOpaque())
+        
+        CFNotificationCenterAddObserver(center,
+                                        observer,
+                                        { (center, observer, name, object, userInfo) in
+                                            guard let observer = observer else { return }
+                                            let mySelf = Unmanaged<AppDelegate>.fromOpaque(observer).takeUnretainedValue()
+                                            mySelf.processRequests()
+                                        },
+                                        darwinNotificationName as CFString,
+                                        nil,
+                                        .deliverImmediately)
+        
+        // Initial check
+        processRequests()
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             self.statusBarController.checkExtensionEnabled()
@@ -22,45 +35,81 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        sharedDefaults.removeObserver(self, forKeyPath: triggerKey)
+        let center = CFNotificationCenterGetDarwinNotifyCenter()
+        CFNotificationCenterRemoveEveryObserver(center, UnsafeRawPointer(Unmanaged.passUnretained(self).toOpaque()))
     }
 
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        return false
-    }
-
-    private func startObservingTerminalOpenRequests() {
-        NSLog("TermSnap: Starting low-level observation of App Group.")
+    // MARK: - Processor
+    
+    @objc private func processRequests() {
+        sharedDefaults.synchronize()
         
-        // Low-level KVO is the most robust way for cross-process UserDefaults monitoring
-        sharedDefaults.addObserver(self, forKeyPath: triggerKey, options: .new, context: nil)
-        
-        // Backup observer for general changes
-        NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification,
-                                               object: sharedDefaults,
-                                               queue: .main) { [weak self] _ in
-            NSLog("TermSnap: Notification backup triggered.")
-            self?.processLastTerminalRequest()
-        }
-    }
-
-    override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
-        if keyPath == triggerKey {
-            NSLog("TermSnap: Low-level KVO triggered for \(triggerKey)")
-            processLastTerminalRequest()
-        }
-    }
-
-    private func processLastTerminalRequest() {
-        let path = sharedDefaults.string(forKey: "lastOpenTerminalPath") ?? ""
-        if !path.isEmpty {
-            NSLog("TermSnap: Processing terminal request for: \(path)")
+        // 1. Process Terminal Request
+        let terminalPath = sharedDefaults.string(forKey: "lastOpenTerminalPath") ?? ""
+        if !terminalPath.isEmpty {
+            os_log("TermSnap: Processing Terminal Open for %{public}s", log: logger, type: .info, terminalPath)
             Task { @MainActor in
-                TerminalLauncher.openDirectory(path)
-                // Clear the path after starting process to avoid re-triggering
+                TerminalLauncher.openDirectory(terminalPath)
                 sharedDefaults.removeObject(forKey: "lastOpenTerminalPath")
                 sharedDefaults.synchronize()
             }
         }
+        
+        // 2. Process File Creation Request
+        let templatePath = sharedDefaults.string(forKey: "createFileTemplatePath") ?? ""
+        let targetDirPath = sharedDefaults.string(forKey: "createFileTargetDir") ?? ""
+        
+        if !templatePath.isEmpty && !targetDirPath.isEmpty {
+            os_log("TermSnap: Processing File Creation request", log: logger, type: .info)
+            os_log("TermSnap: Template: %{public}s", log: logger, type: .info, templatePath)
+            os_log("TermSnap: TargetDir: %{public}s", log: logger, type: .info, targetDirPath)
+            
+            let templateURL = URL(fileURLWithPath: templatePath)
+            let targetDir = URL(fileURLWithPath: targetDirPath)
+            
+            // Validate template existence
+            if !FileManager.default.fileExists(atPath: templateURL.path) {
+                os_log("TermSnap: Error - Template file NOT FOUND at %{public}s", log: logger, type: .error, templateURL.path)
+                clearCreateFileFlags()
+                return
+            }
+            
+            let fileName = templateURL.lastPathComponent
+            var finalDestURL = targetDir.appendingPathComponent(fileName)
+            
+            // Collision handling
+            var counter = 2
+            let nameWithoutExt = templateURL.deletingPathExtension().lastPathComponent
+            let ext = templateURL.pathExtension
+            
+            while FileManager.default.fileExists(atPath: finalDestURL.path) {
+                let suffix = ext.isEmpty ? "" : ".\(ext)"
+                finalDestURL = targetDir.appendingPathComponent("\(nameWithoutExt) \(counter)\(suffix)")
+                counter += 1
+            }
+            
+            do {
+                try FileManager.default.copyItem(at: templateURL, to: finalDestURL)
+                os_log("TermSnap: SUCCESS! Created file at %{public}s", log: logger, type: .info, finalDestURL.path)
+                
+                clearCreateFileFlags()
+                
+                // Refresh Finder UI and select the new file
+                NSWorkspace.shared.activateFileViewerSelecting([finalDestURL])
+                
+            } catch {
+                os_log("TermSnap: Copy FAILED: %{public}s", log: logger, type: .error, error.localizedDescription)
+                clearCreateFileFlags()
+                
+                // Last ditch effort: touch
+                FileManager.default.createFile(atPath: finalDestURL.path, contents: nil, attributes: nil)
+            }
+        }
+    }
+    
+    private func clearCreateFileFlags() {
+        sharedDefaults.removeObject(forKey: "createFileTemplatePath")
+        sharedDefaults.removeObject(forKey: "createFileTargetDir")
+        sharedDefaults.synchronize()
     }
 }

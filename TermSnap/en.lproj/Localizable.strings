@@ -10,6 +10,17 @@
 "Desktop" = "Desktop";
 "Choose default save location for screenshots" = "Choose default save location for screenshots";
 
+"Menu Layout" = "Menu Layout";
+"Flat" = "Flat";
+"Nested" = "Nested";
+"Show Icons for Templates" = "Show Icons for Templates";
+"Open Terminal Here" = "Open Terminal Here";
+"Create New File (Submenu)" = "Create New File (Submenu)";
+"Menu Items" = "Menu Items";
+"Open Templates Folder" = "Open Templates Folder";
+"Enabled Templates" = "Enabled Templates";
+"Any file in the Templates folder will appear here. Toggle to show/hide in the Finder menu." = "Any file in the Templates folder will appear here. Toggle to show/hide in the Finder menu.";
+
 "Take Screenshot" = "Take Screenshot";
 "Scrolling Screenshot" = "Scrolling Screenshot";
 "Enable Finder Extension" = "Enable Finder Extension";
