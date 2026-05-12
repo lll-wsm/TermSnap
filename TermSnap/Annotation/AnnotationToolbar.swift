@@ -3,6 +3,8 @@ import AppKit
 class AnnotationToolbar: NSView {
     private let annotationView: AnnotationView
     private let stackView = NSStackView()
+    private var colorWell: NSColorWell?
+    private var colorButton: NSButton?
     var onCopy: (() -> Void)?
     var onSave: (() -> Void)?
     var onCancel: (() -> Void)?
@@ -22,7 +24,7 @@ class AnnotationToolbar: NSView {
         setupStack()
         addToolButtons()
         addSeparator()
-        addColorButtons()
+        addColorPicker()
         addSeparator()
         addWidthDots()
         addSeparator()
@@ -32,7 +34,7 @@ class AnnotationToolbar: NSView {
 
         // Calculate size based on stack view content
         let fittingWidth = stackView.fittingSize.width
-        let minWidth: CGFloat = 720
+        let minWidth: CGFloat = 400
         let contentWidth = max(minWidth, ceil(fittingWidth))
         let clampedWidth = min(contentWidth, parentBounds.width - 20)
         
@@ -43,8 +45,8 @@ class AnnotationToolbar: NSView {
 
     private func setupStack() {
         stackView.orientation = .horizontal
-        stackView.spacing = 0
-        stackView.edgeInsets = NSEdgeInsets(top: 0, left: 6, bottom: 0, right: 6)
+        stackView.spacing = 2 // Small spacing between standard 32px items
+        stackView.edgeInsets = NSEdgeInsets(top: 0, left: 10, bottom: 0, right: 10)
         stackView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(stackView)
         NSLayoutConstraint.activate([
@@ -74,36 +76,90 @@ class AnnotationToolbar: NSView {
             btn.widthAnchor.constraint(equalToConstant: 32).isActive = true
             btn.heightAnchor.constraint(equalToConstant: 32).isActive = true
             stackView.addArrangedSubview(btn)
+            
+            // Initial selection highlight
+            if tool == annotationView.currentTool {
+                btn.layer?.backgroundColor = NSColor(white: 1, alpha: 0.2).cgColor
+            }
         }
     }
 
     // MARK: - Color Picker
 
-    private func addColorButtons() {
-        for (i, color) in ColorPalette.presets.enumerated() {
-            let container = NSView(frame: .zero)
-            container.wantsLayer = false
-            container.widthAnchor.constraint(equalToConstant: 28).isActive = true
-            container.heightAnchor.constraint(equalToConstant: Self.barHeight).isActive = true
+    private func addColorPicker() {
+        // We use a custom button for the visual "square" to bypass NSColorWell's size limits
+        let btn = NSButton(frame: .zero)
+        btn.bezelStyle = .shadowlessSquare
+        btn.isBordered = false
+        btn.wantsLayer = true
+        btn.layer?.cornerRadius = 2
+        btn.layer?.backgroundColor = annotationView.currentColor.cgColor
+        btn.title = ""
+        btn.target = self
+        btn.action = #selector(openColorPicker(_:))
+        btn.toolTip = NSLocalizedString("Color Picker", comment: "")
+        
+        let container = NSView(frame: .zero)
+        container.translatesAutoresizingMaskIntoConstraints = false
+        container.widthAnchor.constraint(equalToConstant: 32).isActive = true // Match other tools
+        container.heightAnchor.constraint(equalToConstant: Self.barHeight).isActive = true
+        
+        container.addSubview(btn)
+        btn.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            btn.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+            btn.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            btn.widthAnchor.constraint(equalToConstant: 14), // Perfect square size
+            btn.heightAnchor.constraint(equalToConstant: 14)
+        ])
+        
+        self.colorButton = btn
+        stackView.addArrangedSubview(container)
+        
+        // Hidden ColorWell that actually manages the system color panel
+        let well = NSColorWell(frame: .zero)
+        well.isHidden = true
+        well.target = self
+        well.action = #selector(colorChanged(_:))
+        addSubview(well)
+        self.colorWell = well
+    }
 
-            let btn = NSButton(frame: NSRect(x: 2, y: (Self.barHeight - 24) / 2, width: 24, height: 24))
-            btn.bezelStyle = .shadowlessSquare
-            btn.isBordered = false
-            btn.title = ""
-            btn.wantsLayer = true
-            btn.layer?.backgroundColor = color.cgColor
-            btn.layer?.cornerRadius = 12
-            btn.layer?.borderWidth = i == 0 ? 2 : 0
-            btn.layer?.borderColor = NSColor.white.cgColor
-            btn.tag = 100 + i
-            btn.target = self
-            btn.action = #selector(selectColor(_:))
-            btn.toolTip = colorName(color)
-            btn.setContentHuggingPriority(.required, for: .horizontal)
-
-            container.addSubview(btn)
-            stackView.addArrangedSubview(container)
+    @objc private func openColorPicker(_ sender: NSButton) {
+        let panel = NSColorPanel.shared
+        panel.setTarget(self)
+        panel.setAction(#selector(colorPanelChanged(_:)))
+        panel.color = annotationView.currentColor
+        panel.isContinuous = true
+        
+        // Dynamically set level to be one higher than the screenshot overlay
+        if let windowLevel = self.window?.level {
+            panel.level = NSWindow.Level(windowLevel.rawValue + 1)
+        } else {
+            panel.level = .screenSaver
         }
+        
+        // Position panel near the button
+        if let window = self.window {
+            let rectInWindow = sender.convert(sender.bounds, to: nil)
+            let rectInScreen = window.convertToScreen(rectInWindow)
+            // Position the panel above or below the toolbar
+            let panelOrigin = NSPoint(x: rectInScreen.origin.x, 
+                                     y: rectInScreen.origin.y + 40)
+            panel.setFrameOrigin(panelOrigin)
+        }
+        
+        panel.orderFrontRegardless()
+    }
+
+    @objc private func colorPanelChanged(_ sender: NSColorPanel) {
+        annotationView.currentColor = sender.color
+        colorButton?.layer?.backgroundColor = sender.color.cgColor
+    }
+
+    @objc private func colorChanged(_ sender: NSColorWell) {
+        annotationView.currentColor = sender.color
+        colorButton?.layer?.backgroundColor = sender.color.cgColor
     }
 
     // MARK: - Width Dots
@@ -160,14 +216,22 @@ class AnnotationToolbar: NSView {
 
     private func addSeparator() {
         let container = NSView(frame: .zero)
-        container.wantsLayer = false
-        container.widthAnchor.constraint(equalToConstant: 10).isActive = true
+        container.translatesAutoresizingMaskIntoConstraints = false
+        container.widthAnchor.constraint(equalToConstant: 16).isActive = true
         container.heightAnchor.constraint(equalToConstant: Self.barHeight).isActive = true
 
-        let line = NSView(frame: NSRect(x: 4, y: 10, width: 1, height: 24))
+        let line = NSView(frame: .zero)
         line.wantsLayer = true
         line.layer?.backgroundColor = NSColor(white: 1, alpha: 0.2).cgColor
         container.addSubview(line)
+        
+        line.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            line.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+            line.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            line.widthAnchor.constraint(equalToConstant: 1),
+            line.heightAnchor.constraint(equalToConstant: 24)
+        ])
 
         stackView.addArrangedSubview(container)
     }
@@ -227,19 +291,9 @@ class AnnotationToolbar: NSView {
     @objc private func selectTool(_ sender: NSButton) {
         let tool = AnnotationTool.allCases[sender.tag]
         annotationView.currentTool = tool
-        for case let btn as NSButton in stackView.arrangedSubviews {
+        for btn in stackView.arrangedSubviews.compactMap({ $0 as? NSButton }) {
             guard btn.tag < 100 else { continue }
             btn.layer?.backgroundColor = btn.tag == sender.tag ? NSColor(white: 1, alpha: 0.2).cgColor : .clear
-        }
-    }
-
-    @objc private func selectColor(_ sender: NSButton) {
-        let idx = sender.tag - 100
-        guard idx >= 0, idx < ColorPalette.presets.count else { return }
-        annotationView.currentColor = ColorPalette.presets[idx]
-        for case let container as NSView in stackView.arrangedSubviews {
-            guard let btn = container.subviews.first as? NSButton, btn.tag >= 100, btn.tag < 200 else { continue }
-            btn.layer?.borderWidth = btn.tag == sender.tag ? 2 : 0
         }
     }
 
@@ -257,20 +311,4 @@ class AnnotationToolbar: NSView {
     @objc private func cancelAction() { onCancel?() }
     @objc private func saveAction() { onSave?() }
     @objc private func copyAction() { onCopy?() }
-
-    private func colorName(_ color: NSColor) -> String {
-        switch color {
-        case .red: return NSLocalizedString("Red", comment: "")
-        case .orange: return NSLocalizedString("Orange", comment: "")
-        case .yellow: return NSLocalizedString("Yellow", comment: "")
-        case .green: return NSLocalizedString("Green", comment: "")
-        case .cyan: return NSLocalizedString("Cyan", comment: "")
-        case .blue: return NSLocalizedString("Blue", comment: "")
-        case .purple: return NSLocalizedString("Purple", comment: "")
-        case .white: return NSLocalizedString("White", comment: "")
-        case .black: return NSLocalizedString("Black", comment: "")
-        case NSColor(white: 0.5, alpha: 1): return NSLocalizedString("Gray", comment: "")
-        default: return ""
-        }
-    }
 }

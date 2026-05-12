@@ -31,8 +31,9 @@ class OverlayWindow: NSWindow {
                    backing: .buffered,
                    defer: false)
 
-        // Using a high level but not .screenSaver which can be problematic with event routing
-        self.level = NSWindow.Level(Int(CGWindowLevelForKey(.maximumWindow)))
+        // Use a level high enough to cover the menu bar (statusBar is 25)
+        // but low enough to allow panels and popups if needed.
+        self.level = .statusBar + 1
         self.isOpaque = false
         self.backgroundColor = .clear
         self.ignoresMouseEvents = false
