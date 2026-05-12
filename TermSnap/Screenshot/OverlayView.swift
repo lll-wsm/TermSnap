@@ -528,8 +528,15 @@ class OverlayView: NSView {
         filter.setValue(1.0, forKey: kCIInputAspectRatioKey)
         guard let scaledImage = filter.outputImage else { return nil }
 
+        // 4. Subtle unsharp mask to restore edge definition softened by downsampling
+        guard let sharpen = CIFilter(name: "CIUnsharpMask") else { return nil }
+        sharpen.setValue(scaledImage, forKey: kCIInputImageKey)
+        sharpen.setValue(1.0, forKey: kCIInputRadiusKey)
+        sharpen.setValue(0.4, forKey: kCIInputIntensityKey)
+        guard let sharpened = sharpen.outputImage else { return nil }
+
         let ciContext = CIContext(options: [.useSoftwareRenderer: false])
-        guard let finalImage = ciContext.createCGImage(scaledImage, from: scaledImage.extent) else { return nil }
+        guard let finalImage = ciContext.createCGImage(sharpened, from: sharpened.extent) else { return nil }
         return NSImage(cgImage: finalImage, size: NSSize(width: outWidth, height: outHeight))
     }
 
