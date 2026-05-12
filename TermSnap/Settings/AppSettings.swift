@@ -19,4 +19,25 @@ enum AppSettings {
         get { defaults.bool(forKey: "showFinderIcon") }
         set { defaults.set(newValue, forKey: "showFinderIcon") }
     }
+
+    static var enabledTemplates: [String] {
+        get { defaults.stringArray(forKey: "enabledTemplates") ?? [] }
+        set { defaults.set(newValue, forKey: "enabledTemplates") }
+    }
+    static var showTemplateIcons: Bool {
+        get { defaults.object(forKey: "showTemplateIcons") == nil ? true : defaults.bool(forKey: "showTemplateIcons") }
+        set { defaults.set(newValue, forKey: "showTemplateIcons") }
+    }
+    static var showCreateFileMenu: Bool {
+        get { defaults.object(forKey: "showCreateFileMenu") == nil ? true : defaults.bool(forKey: "showCreateFileMenu") }
+        set { defaults.set(newValue, forKey: "showCreateFileMenu") }
+    }
+    static var showTerminalMenu: Bool {
+        get { defaults.object(forKey: "showTerminalMenu") == nil ? true : defaults.bool(forKey: "showTerminalMenu") }
+        set { defaults.set(newValue, forKey: "showTerminalMenu") }
+    }
+    static var menuLayout: String {
+        get { defaults.string(forKey: "menuLayout") ?? "nested" }
+        set { defaults.set(newValue, forKey: "menuLayout") }
+    }
 }
