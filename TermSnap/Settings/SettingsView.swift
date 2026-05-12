@@ -3,10 +3,57 @@ import AppKit
 import Combine
 
 struct SettingsView: View {
+    enum Tab: String, CaseIterable {
+        case screenshot = "Screenshot"
+        case contextMenu = "Context Menu"
+        
+        var icon: String {
+            switch self {
+            case .screenshot: return "camera"
+            case .contextMenu: return "computermouse"
+            }
+        }
+        
+        var localizedName: String {
+            switch self {
+            case .screenshot: return NSLocalizedString("Screenshot", comment: "")
+            case .contextMenu: return NSLocalizedString("Context Menu", comment: "")
+            }
+        }
+    }
+    
+    @State private var selectedTab: Tab? = .screenshot
+    
+    var body: some View {
+        NavigationSplitView {
+            List(Tab.allCases, id: \.self, selection: $selectedTab) { tab in
+                Label(tab.localizedName, systemImage: tab.icon)
+            }
+            .listStyle(.sidebar)
+            .navigationTitle(NSLocalizedString("Settings", comment: ""))
+        } detail: {
+            if let tab = selectedTab {
+                switch tab {
+                case .screenshot:
+                    ScreenshotSettingsView()
+                case .contextMenu:
+                    ContextMenuSettingsView()
+                }
+            } else {
+                Text(NSLocalizedString("Select a category", comment: ""))
+                    .foregroundColor(.secondary)
+            }
+        }
+        .frame(width: 600, height: 450)
+    }
+}
+
+// MARK: - Screenshot Settings
+
+struct ScreenshotSettingsView: View {
     @State private var saveFormat = AppSettings.saveFormat
     @State private var saveDirectory = AppSettings.saveDirectory
     @State private var shortcutCapture = AppSettings.shortcutCapture
-    @State private var showFinderIcon = AppSettings.showFinderIcon
 
     var body: some View {
         Form {
@@ -32,12 +79,6 @@ struct SettingsView: View {
             }
 
             Section {
-                Toggle(NSLocalizedString("Show Icon in Context Menu", comment: ""), isOn: $showFinderIcon)
-            } header: {
-                Label(NSLocalizedString("Finder Extension", comment: ""), systemImage: "macwindow")
-            }
-
-            Section {
                 ShortcutRow(label: NSLocalizedString("Capture", comment: ""), shortcut: $shortcutCapture)
             } header: {
                 Label(NSLocalizedString("Shortcuts", comment: ""), systemImage: "keyboard")
@@ -46,12 +87,11 @@ struct SettingsView: View {
                     .foregroundColor(.secondary)
             }
         }
-        .padding()
-        .frame(width: 380, height: 320)
+        .formStyle(.grouped)
+        .navigationTitle(NSLocalizedString("Screenshot", comment: ""))
         .onChange(of: saveFormat) { _, newValue in AppSettings.saveFormat = newValue }
         .onChange(of: saveDirectory) { _, newValue in AppSettings.saveDirectory = newValue }
         .onChange(of: shortcutCapture) { _, newValue in AppSettings.shortcutCapture = newValue }
-        .onChange(of: showFinderIcon) { _, newValue in AppSettings.showFinderIcon = newValue }
     }
 
     private var directoryDisplayName: String {
@@ -72,9 +112,28 @@ struct SettingsView: View {
     }
 }
 
+// MARK: - Context Menu Settings
+
+struct ContextMenuSettingsView: View {
+    @State private var showFinderIcon = AppSettings.showFinderIcon
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle(NSLocalizedString("Show Icon in Context Menu", comment: ""), isOn: $showFinderIcon)
+            } header: {
+                Label(NSLocalizedString("Finder Extension", comment: ""), systemImage: "macwindow")
+            }
+        }
+        .formStyle(.grouped)
+        .navigationTitle(NSLocalizedString("Context Menu", comment: ""))
+        .onChange(of: showFinderIcon) { _, newValue in AppSettings.showFinderIcon = newValue }
+    }
+}
+
 // MARK: - Shortcut Row
 
-private struct ShortcutRow: View {
+struct ShortcutRow: View {
     let label: String
     @Binding var shortcut: String
     @State private var isRecording = false
@@ -120,14 +179,14 @@ private struct ShortcutRow: View {
 
 // MARK: - Shortcut Recorder
 
-private class ShortcutRecorder: NSObject, ObservableObject {
+class ShortcutRecorder: NSObject, ObservableObject {
     private var monitor: Any?
     private var handler: ((String) -> Void)?
 
     func start(handler: @escaping (String) -> Void) {
         self.handler = handler
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self else { return event }
+            guard self != nil else { return event }
 
             let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
             let hasModifier = !modifiers.isDisjoint(with: [.command, .option, .control, .shift])
