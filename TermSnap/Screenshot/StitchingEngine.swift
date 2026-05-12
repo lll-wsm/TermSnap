@@ -223,6 +223,10 @@ class StitchingEngine {
             let contentLast = croppedLast ?? last
             let contentNew = croppedNew ?? newFrame
 
+            // ── Per-frame scroll delta (computed BEFORE steps so it's always valid) ──
+            let scrollDelta = self.hintedDy - self.lastHintedDy
+            self.lastHintedDy = self.hintedDy
+
             // ── Step 1: Try Vision feature-based registration ──
             var detectedDy: Int?
             var dySource = "none"
@@ -266,17 +270,13 @@ class StitchingEngine {
             // ── Step 3: Last-resort fallback to cumulative scroll displacement ──
             // Only trust scroll events if frames actually differ (browser may be
             // at scroll boundary where events fire but content doesn't change).
-            if detectedDy == nil {
-                let delta = self.hintedDy - self.lastHintedDy
-                self.lastHintedDy = self.hintedDy
-                if abs(delta) > 0.5,
-                   !MotionDifferencingEngine.areFramesNearlyIdentical(contentLast, contentNew) {
-                    self.accumulatedDy += delta
-                    let dy = Int(round(self.accumulatedDy))
-                    if abs(dy) > 0 {
-                        detectedDy = dy
-                        dySource = "scrollEvent"
-                    }
+            if detectedDy == nil, abs(scrollDelta) > 0.5,
+               !MotionDifferencingEngine.areFramesNearlyIdentical(contentLast, contentNew) {
+                self.accumulatedDy += scrollDelta
+                let dy = Int(round(self.accumulatedDy))
+                if abs(dy) > 0 {
+                    detectedDy = dy
+                    dySource = "scrollEvent"
                 }
             }
 
