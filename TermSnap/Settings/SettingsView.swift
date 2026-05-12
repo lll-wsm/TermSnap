@@ -185,6 +185,7 @@ struct ContextMenuSettingsView: View {
         }
         .formStyle(.grouped)
         .navigationTitle(NSLocalizedString("Context Menu", comment: ""))
+        .onAppear { templateManager.refreshTemplates() }
         .onChange(of: enabledTemplates) { _, newValue in AppSettings.enabledTemplates = newValue }
         .onChange(of: showTerminalMenu) { _, newValue in AppSettings.showTerminalMenu = newValue }
         .onChange(of: showCreateFileMenu) { _, newValue in AppSettings.showCreateFileMenu = newValue }

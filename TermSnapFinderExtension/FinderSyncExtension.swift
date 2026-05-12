@@ -69,6 +69,11 @@ class FinderSyncExtension: FIFinderSync {
             if !templates.isEmpty {
                 let title = NSLocalizedString("Create New File", comment: "")
                 let createFileItem = containerMenu.addItem(withTitle: title, action: nil, keyEquivalent: "")
+                
+                if showFinderIcon {
+                    createFileItem.image = NSImage(systemSymbolName: "doc.badge.plus", accessibilityDescription: nil)
+                }
+                
                 let createFileSubmenu = NSMenu(title: title)
                 containerMenu.setSubmenu(createFileSubmenu, for: createFileItem)
                 

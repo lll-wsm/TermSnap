@@ -19,7 +19,7 @@
 "Menu Items" = "菜单项";
 "Open Templates Folder" = "打开模板文件夹";
 "Enabled Templates" = "已启用的模板";
-"Any file in the Templates folder will appear here. Toggle to show/hide in the Finder menu." = "模板文件夹中的任何文件都将显示在此处。切换以在 Finder 菜单中显示/隐藏。";
+"Any file in the Templates folder will appear here. Toggle to show/hide in the Finder menu." = "模板文件夹中的任何文件都将显示在此处。";
 
 "Take Screenshot" = "进行截图";
 "Scrolling Screenshot" = "滚动截图";
