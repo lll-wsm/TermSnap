@@ -11,6 +11,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusBarController.setup()
         
+        // Register global shortcut
+        setupGlobalShortcut()
+        
+        // Listen for shortcut changes from Settings
+        NotificationCenter.default.addObserver(self, selector: #selector(setupGlobalShortcut), name: Notification.Name("ShortcutChanged"), object: nil)
+        
         // Listen for Darwin Notifications
         let center = CFNotificationCenterGetDarwinNotifyCenter()
         let observer = UnsafeRawPointer(Unmanaged.passUnretained(self).toOpaque())
@@ -34,9 +40,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    @objc private func setupGlobalShortcut() {
+        let keyCode = AppSettings.shortcutCaptureKeyCode
+        let modifiers = AppSettings.shortcutCaptureModifiers
+        
+        if keyCode > 0 {
+            GlobalShortcutManager.shared.register(keyCode: keyCode, modifiers: modifiers) { [weak self] in
+                self?.statusBarController.captureScreenshot()
+            }
+        }
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         let center = CFNotificationCenterGetDarwinNotifyCenter()
         CFNotificationCenterRemoveEveryObserver(center, UnsafeRawPointer(Unmanaged.passUnretained(self).toOpaque()))
+        GlobalShortcutManager.shared.unregister()
     }
 
     // MARK: - Processor

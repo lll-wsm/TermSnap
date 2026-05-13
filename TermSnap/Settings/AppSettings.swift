@@ -15,6 +15,14 @@ enum AppSettings {
         get { defaults.string(forKey: "shortcutCapture") ?? "" }
         set { defaults.set(newValue, forKey: "shortcutCapture") }
     }
+    static var shortcutCaptureKeyCode: Int {
+        get { defaults.integer(forKey: "shortcutCaptureKeyCode") }
+        set { defaults.set(newValue, forKey: "shortcutCaptureKeyCode") }
+    }
+    static var shortcutCaptureModifiers: UInt {
+        get { UInt(defaults.integer(forKey: "shortcutCaptureModifiers")) }
+        set { defaults.set(Int(newValue), forKey: "shortcutCaptureModifiers") }
+    }
     static var showFinderIcon: Bool {
         get { defaults.bool(forKey: "showFinderIcon") }
         set { defaults.set(newValue, forKey: "showFinderIcon") }

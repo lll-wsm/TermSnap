@@ -79,7 +79,13 @@ struct ScreenshotSettingsView: View {
             }
 
             Section {
-                ShortcutRow(label: NSLocalizedString("Capture", comment: ""), shortcut: $shortcutCapture)
+                ShortcutRow(label: NSLocalizedString("Capture", comment: ""), shortcut: $shortcutCapture) { keyCode, modifiers in
+                    AppSettings.shortcutCaptureKeyCode = keyCode
+                    AppSettings.shortcutCaptureModifiers = modifiers
+                    
+                    // Trigger re-registration
+                    NotificationCenter.default.post(name: Notification.Name("ShortcutChanged"), object: nil)
+                }
             } header: {
                 Label(NSLocalizedString("Shortcuts", comment: ""), systemImage: "keyboard")
             } footer: {
@@ -200,6 +206,7 @@ struct ContextMenuSettingsView: View {
 struct ShortcutRow: View {
     let label: String
     @Binding var shortcut: String
+    var onRecord: ((Int, UInt) -> Void)? = nil
     @State private var isRecording = false
     @StateObject private var recorder = ShortcutRecorder()
 
@@ -229,8 +236,9 @@ struct ShortcutRow: View {
 
     private func startRecording() {
         isRecording = true
-        recorder.start { keyString in
+        recorder.start { keyString, keyCode, modifiers in
             shortcut = keyString
+            onRecord?(keyCode, modifiers)
             cancelRecording()
         }
     }
@@ -245,9 +253,9 @@ struct ShortcutRow: View {
 
 class ShortcutRecorder: NSObject, ObservableObject {
     private var monitor: Any?
-    private var handler: ((String) -> Void)?
+    private var handler: ((String, Int, UInt) -> Void)?
 
-    func start(handler: @escaping (String) -> Void) {
+    func start(handler: @escaping (String, Int, UInt) -> Void) {
         self.handler = handler
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard self != nil else { return event }
@@ -266,7 +274,7 @@ class ShortcutRecorder: NSObject, ObservableObject {
             if modifiers.contains(.command) { parts.append("\u{2318}") }
             parts.append(char.uppercased())
 
-            handler(parts.joined())
+            handler(parts.joined(), Int(event.keyCode), modifiers.rawValue)
             return nil
         }
     }

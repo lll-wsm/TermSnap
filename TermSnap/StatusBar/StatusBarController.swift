@@ -33,7 +33,7 @@ class StatusBarController: NSObject {
         return item
     }
 
-    @objc private func captureScreenshot() {
+    @objc func captureScreenshot() {
         Task {
             let result = await captureEngine.capture(.interactive)
             switch result {
