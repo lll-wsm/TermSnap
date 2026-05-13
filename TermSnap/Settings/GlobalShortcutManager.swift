@@ -8,14 +8,18 @@ class GlobalShortcutManager {
     private var eventHandlerRef: EventHandlerRef?
     var action: (() -> Void)?
     
+    // Use a unique FourCharCode signature: 'SNAP'
+    static let hotKeySignature = OSType(0x534E4150)
+    
     private init() {}
     
     func register(keyCode: Int, modifiers: UInt, action: @escaping () -> Void) {
+        print("TermSnap: GlobalShortcutManager.register(keyCode: \(keyCode), modifiers: \(modifiers))")
         unregister()
         self.action = action
         
         var hotKeyID = EventHotKeyID()
-        hotKeyID.signature = OSType("SNAP")
+        hotKeyID.signature = Self.hotKeySignature
         hotKeyID.id = 1
         
         var carbonModifiers: UInt32 = 0
@@ -24,8 +28,10 @@ class GlobalShortcutManager {
         if modifiers & NSEvent.ModifierFlags.shift.rawValue != 0 { carbonModifiers |= UInt32(shiftKey) }
         if modifiers & NSEvent.ModifierFlags.control.rawValue != 0 { carbonModifiers |= UInt32(controlKey) }
         
-        // Install event handler if not already installed
+        print("TermSnap: Carbon modifiers: \(String(format: "0x%04X", carbonModifiers))")
+        
         if eventHandlerRef == nil {
+            print("TermSnap: Installing global event handler")
             var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
             
             let status = InstallEventHandler(GetApplicationEventTarget(), { (nextHandler, theEvent, userData) -> OSStatus in
@@ -38,11 +44,14 @@ class GlobalShortcutManager {
                                               nil,
                                               &hotKeyID)
                 
-                if status == noErr && hotKeyID.id == 1 {
-                    DispatchQueue.main.async {
-                        GlobalShortcutManager.shared.action?()
+                if status == noErr {
+                    if hotKeyID.signature == GlobalShortcutManager.hotKeySignature && hotKeyID.id == 1 {
+                        print("TermSnap: Global hotkey 'SNAP' matched!")
+                        DispatchQueue.main.async {
+                            GlobalShortcutManager.shared.action?()
+                        }
+                        return noErr
                     }
-                    return noErr
                 }
                 
                 return OSStatus(eventNotHandledErr)
@@ -61,7 +70,9 @@ class GlobalShortcutManager {
                                         &hotKeyRef)
         
         if status != noErr {
-            print("TermSnap: Failed to register hotkey: \(status)")
+            print("TermSnap: RegisterEventHotKey failed with status: \(status)")
+        } else {
+            print("TermSnap: RegisterEventHotKey SUCCESS for keyCode \(keyCode)")
         }
     }
     

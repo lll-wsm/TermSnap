@@ -79,7 +79,8 @@ struct ScreenshotSettingsView: View {
             }
 
             Section {
-                ShortcutRow(label: NSLocalizedString("Capture", comment: ""), shortcut: $shortcutCapture) { keyCode, modifiers in
+                ShortcutRow(label: NSLocalizedString("Capture", comment: ""), shortcut: $shortcutCapture) { keyString, keyCode, modifiers in
+                    AppSettings.shortcutCapture = keyString
                     AppSettings.shortcutCaptureKeyCode = keyCode
                     AppSettings.shortcutCaptureModifiers = modifiers
                     
@@ -206,7 +207,7 @@ struct ContextMenuSettingsView: View {
 struct ShortcutRow: View {
     let label: String
     @Binding var shortcut: String
-    var onRecord: ((Int, UInt) -> Void)? = nil
+    var onRecord: ((String, Int, UInt) -> Void)? = nil
     @State private var isRecording = false
     @StateObject private var recorder = ShortcutRecorder()
 
@@ -238,7 +239,7 @@ struct ShortcutRow: View {
         isRecording = true
         recorder.start { keyString, keyCode, modifiers in
             shortcut = keyString
-            onRecord?(keyCode, modifiers)
+            onRecord?(keyString, keyCode, modifiers)
             cancelRecording()
         }
     }

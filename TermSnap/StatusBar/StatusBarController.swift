@@ -34,8 +34,10 @@ class StatusBarController: NSObject {
     }
 
     @objc func captureScreenshot() {
+        print("TermSnap: captureScreenshot called")
         Task {
             let result = await captureEngine.capture(.interactive)
+            print("TermSnap: Capture result: \(result)")
             switch result {
             case .started:
                 break

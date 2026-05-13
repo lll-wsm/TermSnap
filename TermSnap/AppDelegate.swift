@@ -43,11 +43,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func setupGlobalShortcut() {
         let keyCode = AppSettings.shortcutCaptureKeyCode
         let modifiers = AppSettings.shortcutCaptureModifiers
+        let shortcutStr = AppSettings.shortcutCapture
         
-        if keyCode > 0 {
+        print("TermSnap: setupGlobalShortcut - str: '\(shortcutStr)', keyCode: \(keyCode), mods: \(modifiers)")
+        
+        if !shortcutStr.isEmpty {
             GlobalShortcutManager.shared.register(keyCode: keyCode, modifiers: modifiers) { [weak self] in
+                print("TermSnap: Global shortcut triggered!")
                 self?.statusBarController.captureScreenshot()
             }
+        } else {
+            print("TermSnap: No shortcut defined, unregistering")
+            GlobalShortcutManager.shared.unregister()
         }
     }
 
