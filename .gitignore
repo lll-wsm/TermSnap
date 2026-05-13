@@ -35,9 +35,7 @@ Icon?
 CLAUDE.md
 AGENTS.md
 GEMINI.md
-issue_fix_summary.md
-docs/superpowers/
-docs/plans/
+docs/
 # Private memory - NEVER commit this
 memory/
 
