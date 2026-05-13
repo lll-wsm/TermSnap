@@ -15,7 +15,6 @@ class StatusBarController: NSObject {
 
         let menu = NSMenu()
         menu.addItem(makeItem(NSLocalizedString("Take Screenshot", comment: ""), action: #selector(captureScreenshot), key: "x"))
-        menu.addItem(makeItem(NSLocalizedString("Scrolling Screenshot", comment: ""), action: #selector(startScrollingScreenshot), key: "s"))
         menu.addItem(makeItem(NSLocalizedString("Enable Finder Extension", comment: ""), action: #selector(openExtensionGuide), key: ""))
         menu.addItem(.separator())
         menu.addItem(makeItem(NSLocalizedString("Settings", comment: ""), action: #selector(openSettings), key: ","))
@@ -38,38 +37,6 @@ class StatusBarController: NSObject {
         Task {
             let result = await captureEngine.capture(.interactive)
             print("TermSnap: Capture result: \(result)")
-            switch result {
-            case .started:
-                break
-            case .permissionDenied:
-                presentScreenCapturePermissionAlert()
-            case .failed(let reason):
-                presentCaptureFailedAlert(reason: reason)
-            }
-        }
-    }
-
-    @objc private func startScrollingScreenshot() {
-        // Enforce accessibility permissions for scrolling capture
-        guard AccessibilityEngine.isTrusted(prompt: true) else {
-            let alert = NSAlert()
-            alert.messageText = NSLocalizedString("Accessibility Permission Required", comment: "")
-            alert.informativeText = NSLocalizedString("Scrolling Screenshot requires Accessibility permissions to accurately identify scrollable areas. Please grant access in System Settings > Privacy & Security > Accessibility.", comment: "")
-            alert.alertStyle = .warning
-            alert.addButton(withTitle: NSLocalizedString("OK", comment: ""))
-            alert.addButton(withTitle: NSLocalizedString("Open System Settings", comment: ""))
-            
-            let response = alert.runModal()
-            if response == .alertSecondButtonReturn {
-                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
-                    NSWorkspace.shared.open(url)
-                }
-            }
-            return
-        }
-        
-        Task {
-            let result = await captureEngine.capture(.scrolling)
             switch result {
             case .started:
                 break

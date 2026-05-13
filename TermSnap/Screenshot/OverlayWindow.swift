@@ -76,36 +76,17 @@ class OverlayWindow: NSWindow {
         // Global monitor runs on a background queue — dispatch UI work to main.
         globalEscMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
             if event.keyCode == 53 { // Esc
-                DispatchQueue.main.async { self?.handleOverlayDismiss() }
-            } else if event.keyCode == 36 || event.keyCode == 76 { // Enter
-                DispatchQueue.main.async {
-                    if let overlay = self?.contentView as? OverlayView, overlay.state == .scrolling {
-                        overlay.finishScrolling()
-                    }
-                }
+                DispatchQueue.main.async { self?.deactivate() }
             }
         }
 
-        // Local monitor: catches Esc/Enter when our window is key (runs on main thread)
+        // Local monitor: catches Esc when our window is key (runs on main thread)
         localEscMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             if event.keyCode == 53 { // Esc
-                self?.handleOverlayDismiss()
-                return nil
-            }
-            if (event.keyCode == 36 || event.keyCode == 76),
-               let overlay = self?.contentView as? OverlayView, overlay.state == .scrolling {
-                overlay.finishScrolling()
+                self?.deactivate()
                 return nil
             }
             return event
-        }
-    }
-
-    private func handleOverlayDismiss() {
-        if let overlay = contentView as? OverlayView, overlay.state == .scrolling {
-            overlay.cancel()
-        } else {
-            deactivate()
         }
     }
 

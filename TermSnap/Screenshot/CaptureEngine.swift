@@ -4,7 +4,6 @@ import CoreMedia
 
 enum CaptureMode {
     case interactive
-    case scrolling
 }
 
 enum CaptureStartResult {
@@ -28,7 +27,7 @@ class CaptureEngine {
             let content = try await SCShareableContent.excludingDesktopWindows(true,
                                                                                onScreenWindowsOnly: true)
             switch mode {
-            case .interactive, .scrolling:
+            case .interactive:
                 guard let display = content.displays.first else {
                     return .failed(reason: "No available display was found for capture.")
                 }
