@@ -223,13 +223,17 @@ class StitchingEngine {
             let contentLast = croppedLast ?? last
             let contentNew = croppedNew ?? newFrame
 
-            // ── Per-frame scroll delta (computed BEFORE steps so it's always valid) ──
+            // ── Per-frame scroll delta for search hint / last-resort fallback ──
+            // NOTE: scrollingDeltaY is in scroll-event units, NOT screen pixels.
+            // It indicates direction and relative magnitude, not absolute displacement.
             let scrollDelta = self.hintedDy - self.lastHintedDy
             self.lastHintedDy = self.hintedDy
+            let framesDiffer = !MotionDifferencingEngine.areFramesNearlyIdentical(contentLast, contentNew)
 
-            // ── Step 1: Try Vision feature-based registration ──
             var detectedDy: Int?
             var dySource = "none"
+
+            // ── Step 1: Try Vision feature-based registration ──
             let handler = VNImageRequestHandler(cgImage: contentLast, options: [:])
             let registrationRequest = VNTranslationalImageRegistrationRequest(targetedCGImage: contentNew)
 
@@ -251,12 +255,16 @@ class StitchingEngine {
                 stitchingLog.debug("StableStitch: Vision threw error: \(error.localizedDescription)")
             }
 
-            // ── Step 2: Fallback to row-signature correlation ──
+            // ── Step 2: Row-signature correlation with dynamic search range ──
             if detectedDy == nil {
+                // Use scrollDelta to widen search range when scrolling fast,
+                // but clamp so correlation doesn't waste cycles on implausible offsets.
+                let baseRange = max(200, Int(abs(scrollDelta) * 0.25) + 20)
+                let searchRange = min(baseRange, Int(frameH)) // never exceed frame height
                 if let corrDy = MotionDifferencingEngine.detectDisplacement(
                     baseline: contentLast,
                     current: contentNew,
-                    maxDisplacement: 80
+                    maxDisplacement: searchRange
                 ) {
                     self.accumulatedDy += Double(corrDy)
                     let dy = Int(round(self.accumulatedDy))
@@ -267,12 +275,13 @@ class StitchingEngine {
                 }
             }
 
-            // ── Step 3: Last-resort fallback to cumulative scroll displacement ──
-            // Only trust scroll events if frames actually differ (browser may be
-            // at scroll boundary where events fire but content doesn't change).
-            if detectedDy == nil, abs(scrollDelta) > 0.5,
-               !MotionDifferencingEngine.areFramesNearlyIdentical(contentLast, contentNew) {
-                self.accumulatedDy += scrollDelta
+            // ── Step 3: Last-resort fallback — use scroll event direction + conservative cap ──
+            if detectedDy == nil, abs(scrollDelta) > 0.5, framesDiffer {
+                // scrollingDeltaY is not pixel-accurate, so cap the fallback.
+                // Fast scrolling still moves content, so allow up to 40 logical lines (~640px).
+                let capped = min(640, abs(scrollDelta) * 0.5)
+                let guessedDy = scrollDelta > 0 ? capped : -capped
+                self.accumulatedDy += guessedDy
                 let dy = Int(round(self.accumulatedDy))
                 if abs(dy) > 0 {
                     detectedDy = dy
@@ -288,8 +297,8 @@ class StitchingEngine {
             idleFrameCount = 0
             frameCount += 1
 
-            if abs(dy) > Int(frameH / 2) {
-                stitchingLog.info("StableStitch: dy too large (\(dy) > \(Int(frameH/2))), resetting")
+            if abs(dy) > Int(Double(frameH) * 0.7) {
+                stitchingLog.info("StableStitch: dy too large (\(dy) > \(Int(Double(frameH) * 0.7))), resetting")
                 lastFrame = newFrame
                 accumulatedDy = 0
                 return finalize()

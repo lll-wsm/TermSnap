@@ -77,10 +77,11 @@ class CaptureEngine {
         config.width = Int(area.width * scale)
         config.height = Int(area.height * scale)
         config.destinationRect = CGRect(x: 0, y: 0, width: CGFloat(config.width), height: CGFloat(config.height))
-        config.minimumFrameInterval = CMTime(value: 1, timescale: 10) // 10 FPS
-        config.queueDepth = 5
+        config.minimumFrameInterval = CMTime(value: 1, timescale: 30) // 30 FPS
+        config.queueDepth = 8
         config.pixelFormat = kCVPixelFormatType_32BGRA
-        
+        config.showsCursor = false
+
         let scStream = SCStream(filter: filter, configuration: config, delegate: output)
         try scStream.addStreamOutput(output, type: .screen, sampleHandlerQueue: .global(qos: .userInteractive))
         
