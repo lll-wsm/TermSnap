@@ -516,28 +516,9 @@ class OverlayView: NSView {
 
         guard let hiresOutput = ctx.makeImage() else { return nil }
 
-        // 3. Downsample to 1x with Lanczos for high-quality result.
-        //    This preserves detail from the 2x render while matching the selection dimensions.
-        let outWidth = Int(round(cropRect.width))
-        let outHeight = Int(round(cropRect.height))
-        let ciImage = CIImage(cgImage: hiresOutput)
-        let scaleFactor = CGFloat(outWidth) / CGFloat(pixelWidth)
-        guard let filter = CIFilter(name: "CILanczosScaleTransform") else { return nil }
-        filter.setValue(ciImage, forKey: kCIInputImageKey)
-        filter.setValue(scaleFactor, forKey: kCIInputScaleKey)
-        filter.setValue(1.0, forKey: kCIInputAspectRatioKey)
-        guard let scaledImage = filter.outputImage else { return nil }
-
-        // 4. Subtle unsharp mask to restore edge definition softened by downsampling
-        guard let sharpen = CIFilter(name: "CIUnsharpMask") else { return nil }
-        sharpen.setValue(scaledImage, forKey: kCIInputImageKey)
-        sharpen.setValue(1.0, forKey: kCIInputRadiusKey)
-        sharpen.setValue(0.4, forKey: kCIInputIntensityKey)
-        guard let sharpened = sharpen.outputImage else { return nil }
-
-        let ciContext = CIContext(options: [.useSoftwareRenderer: false])
-        guard let finalImage = ciContext.createCGImage(sharpened, from: sharpened.extent) else { return nil }
-        return NSImage(cgImage: finalImage, size: NSSize(width: outWidth, height: outHeight))
+        let outWidth = cropRect.width
+        let outHeight = cropRect.height
+        return NSImage(cgImage: hiresOutput, size: NSSize(width: outWidth, height: outHeight))
     }
 
     @objc private func copyToClipboard() {
