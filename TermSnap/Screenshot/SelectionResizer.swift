@@ -88,14 +88,14 @@ struct SelectionResizer {
     private func handlePoint(_ handle: ResizeHandle) -> NSPoint {
         let r = selectionRect
         switch handle {
-        case .topLeft:     return NSPoint(x: r.minX, y: r.maxY)
-        case .top:         return NSPoint(x: r.midX, y: r.maxY)
-        case .topRight:    return NSPoint(x: r.maxX, y: r.maxY)
+        case .topLeft:     return NSPoint(x: r.minX, y: r.minY)
+        case .top:         return NSPoint(x: r.midX, y: r.minY)
+        case .topRight:    return NSPoint(x: r.maxX, y: r.minY)
         case .left:        return NSPoint(x: r.minX, y: r.midY)
         case .right:       return NSPoint(x: r.maxX, y: r.midY)
-        case .bottomLeft:  return NSPoint(x: r.minX, y: r.minY)
-        case .bottom:      return NSPoint(x: r.midX, y: r.minY)
-        case .bottomRight: return NSPoint(x: r.maxX, y: r.minY)
+        case .bottomLeft:  return NSPoint(x: r.minX, y: r.maxY)
+        case .bottom:      return NSPoint(x: r.midX, y: r.maxY)
+        case .bottomRight: return NSPoint(x: r.maxX, y: r.maxY)
         }
     }
 }

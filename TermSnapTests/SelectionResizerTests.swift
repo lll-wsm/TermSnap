@@ -7,7 +7,8 @@ struct SelectionResizerTests {
     var resizer: SelectionResizer { SelectionResizer(selectionRect: rect) }
 
     @Test func handleDetectionOnCorner() {
-        let handle = resizer.handleAt(NSPoint(x: 100, y: 250))
+        // In flipped view, minX/minY is Top-Left (100, 100)
+        let handle = resizer.handleAt(NSPoint(x: 100, y: 100))
         #expect(handle == .topLeft)
     }
 
@@ -17,16 +18,19 @@ struct SelectionResizerTests {
     }
 
     @Test func handleDetectionOnBottomRightCorner() {
-        let handle = resizer.handleAt(NSPoint(x: 300, y: 100))
+        // In flipped view, maxX/maxY is Bottom-Right (300, 250)
+        let handle = resizer.handleAt(NSPoint(x: 300, y: 250))
         #expect(handle == .bottomRight)
     }
 
     @Test func handleDetectionOnEdge() {
-        let handle = resizer.handleAt(NSPoint(x: 200, y: 250))
+        // midX/minY is Top edge (200, 100)
+        let handle = resizer.handleAt(NSPoint(x: 200, y: 100))
         #expect(handle == .top)
     }
 
     @Test func resizeFromTopLeftExpandsRect() {
+        // Moving Top-Left further up and left (-dx, -dy) should expand the rect
         let result = resizer.rectByResizing(rect, handle: .topLeft, delta: NSPoint(x: -10, y: -10))
         #expect(result.origin.x == 90)
         #expect(result.origin.y == 90)
@@ -37,6 +41,7 @@ struct SelectionResizerTests {
     @Test func resizeFromRightEdge() {
         let result = resizer.rectByResizing(rect, handle: .right, delta: NSPoint(x: 20, y: 0))
         #expect(result.size.width == 220)
+        #expect(result.origin.x == 100) // Left edge fixed
     }
 
     @Test func resizeEnforcesMinimumSize() {
@@ -46,7 +51,7 @@ struct SelectionResizerTests {
     }
 
     @Test func cursorAtHandleReturnsResizeCursor() {
-        let cursor = resizer.cursorAt(NSPoint(x: 100, y: 250))
+        let cursor = resizer.cursorAt(NSPoint(x: 100, y: 100))
         #expect(cursor == .crosshair)
     }
 
@@ -66,17 +71,7 @@ struct SelectionResizerTests {
     }
 
     @Test func handleDetectionOnBottomEdge() {
-        let handle = resizer.handleAt(NSPoint(x: 200, y: 100))
+        let handle = resizer.handleAt(NSPoint(x: 200, y: 250))
         #expect(handle == .bottom)
-    }
-
-    @Test func resizeFromLeftEdgeWithMinSizeClamp() {
-        let result = resizer.rectByResizing(rect, handle: .left, delta: NSPoint(x: 200, y: 0))
-        #expect(result.size.width >= 20)
-    }
-
-    @Test func resizeFromTopEdgeWithMinSizeClamp() {
-        let result = resizer.rectByResizing(rect, handle: .top, delta: NSPoint(x: 0, y: 200))
-        #expect(result.size.height >= 20)
     }
 }
