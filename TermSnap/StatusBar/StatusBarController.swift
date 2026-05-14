@@ -6,12 +6,13 @@ class StatusBarController: NSObject {
     private let captureEngine = CaptureEngine()
 
     func setup() {
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = statusItem?.button {
             button.image = NSImage(named: "PhysalisStatusIcon")
-            button.image?.size = NSSize(width: 24, height: 24)
+            button.image?.size = NSSize(width: 18, height: 18)
             button.image?.isTemplate = true
         }
+
 
         let menu = NSMenu()
         menu.addItem(makeItem(NSLocalizedString("Take Screenshot", comment: ""), action: #selector(captureScreenshot), key: "x"))
