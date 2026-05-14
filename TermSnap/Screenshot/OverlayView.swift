@@ -13,7 +13,6 @@ class OverlayView: NSView {
 
     enum CaptureState {
         case selecting   // Hovering / dragging to define the capture region
-        case scrolling   // User is scrolling to capture long content
         case annotating  // Region confirmed — drawing tools active
     }
 
@@ -53,14 +52,6 @@ class OverlayView: NSView {
             partialResult.union(screen.frame)
         }
     }
-
-    // Scrolling capture state
-    private let stitchingEngine = StitchingEngine()
-    private var previewPanel: ScrollingPreviewPanel?
-    private var borderWindow: NSWindow?
-    private var captureTask: Task<Void, Never>?
-    private var scrollEventMonitor: Any?
-    private var totalScrollDeltaY: Double = 0
 
     init(frame: NSRect, screen: NSScreen, display: SCDisplay, windows: [SCWindow], backgroundImage: NSImage, backgroundCGImage: CGImage, mode: CaptureMode, captureEngine: CaptureEngine?) {
         self.screen = screen
@@ -138,27 +129,10 @@ class OverlayView: NSView {
                     hoveredWindow = window
                 }
                 
-                // Try to find a precise scroll area within the hovered window
-                if mode == .scrolling,
-                   let scrollArea = AccessibilityEngine.findScrollArea(at: sckPoint),
-                   window.frame.intersects(scrollArea) {
-                    
-                    // Convert the global SCK (Top-Left) scroll area rect to our local (Flipped AppKit) rect
-                    let localRect = convertFromSCK(scrollArea)
-                    
-                    // Ensure the scroll area is bounded by the window frame
-                    let localWindowRect = convertFromSCK(window.frame)
-                    let boundedRect = localRect.intersection(localWindowRect)
-                    
-                    hoveredRect = boundedRect
-                    updateSelection(rect: boundedRect)
-                    
-                } else {
-                    // Fallback to the entire SCWindow frame
-                    let rect = convertFromSCK(window.frame)
-                    hoveredRect = rect
-                    updateSelection(rect: rect)
-                }
+                // Fallback to the entire SCWindow frame
+                let rect = convertFromSCK(window.frame)
+                hoveredRect = rect
+                updateSelection(rect: rect)
                 
             } else {
                 // Fallback to full screen if hovering over desktop
@@ -174,9 +148,6 @@ class OverlayView: NSView {
             let point = convert(event.locationInWindow, from: nil)
             let resizer = SelectionResizer(selectionRect: currentRect)
             resizer.cursorAt(point).set()
-
-        case .scrolling:
-            break
         }
     }
 
@@ -219,9 +190,6 @@ class OverlayView: NSView {
                 dragFromPoint = point
                 dragStartRect = currentRect
             }
-
-        case .scrolling:
-            break
         }
     }
 
@@ -256,9 +224,6 @@ class OverlayView: NSView {
             showDimensionLabel(for: currentRect)
             annotationView.frame = currentRect
             repositionToolbar(for: currentRect)
-
-        case .scrolling:
-            break
         }
     }
 
@@ -266,17 +231,9 @@ class OverlayView: NSView {
         switch state {
         case .selecting:
             if didDrag && currentRect.width > 5 && currentRect.height > 5 {
-                if mode == .scrolling {
-                    enterScrollingState(with: currentRect)
-                } else {
-                    enterAnnotationState(with: currentRect)
-                }
+                enterAnnotationState(with: currentRect)
             } else if let hRect = hoveredRect {
-                if mode == .scrolling {
-                    enterScrollingState(with: hRect)
-                } else {
-                    enterAnnotationState(with: hRect)
-                }
+                enterAnnotationState(with: hRect)
             }
             startPoint = nil
             didDrag = false
@@ -285,9 +242,6 @@ class OverlayView: NSView {
             selectedHandle = nil
             dragFromPoint = nil
             dragStartRect = nil
-
-        case .scrolling:
-            break
         }
     }
 
@@ -537,186 +491,6 @@ class OverlayView: NSView {
         }
     }
 
-    // MARK: - Scrolling State
-
-    private func enterScrollingState(with rect: NSRect) {
-        state = .scrolling
-        currentRect = rect
-        isFinishingScrolling = false
-        stitchingEngine.reset()
-
-        // Capture the display rect in SCK coords (Top-Left global)
-        let sckRect = convertToSCK(rect)
-
-        // SCDisplay.frame is also in Top-Left global coordinates.
-        // We need coordinates relative to the display's own top-left.
-        let localDisplayRect = CGRect(
-            x: sckRect.origin.x - display.frame.origin.x,
-            y: sckRect.origin.y - display.frame.origin.y,
-            width: sckRect.width,
-            height: sckRect.height
-        )
-        
-        NSLog("TermSnap: Scrolling start. DisplayOrigin=\(display.frame.origin), sckRect=\(sckRect), local=\(localDisplayRect)")
-
-        // Try AX-based content area detection before streaming
-        var captureArea = localDisplayRect
-        let targetSCWindow = hoveredWindow ?? findSCWindow(for: rect)
-        if let scWin = targetSCWindow {
-            if let axRect = ContentRectDetector.axContentRectInPoints(for: scWin, display: display) {
-                // Ensure the AX rect is within the user's selection
-                captureArea = axRect.intersection(localDisplayRect)
-                NSLog("TermSnap: AX capture area t=\(captureArea)")
-            } else {
-                NSLog("TermSnap: AX detection failed, using selection rect")
-            }
-        }
-
-        // Hide the overlay so user can scroll content naturally
-        window?.orderOut(nil)
-
-        // Show a border window around the capture area
-        showBorderWindow(for: rect)
-        
-        // Show a preview panel
-        let preview = ScrollingPreviewPanel(screen: screen)
-        preview.updatePosition(relativeTo: rect, on: screen)
-        preview.orderFront(nil)
-        previewPanel = preview
-
-        // Monitor scroll wheel events to provide a ground-truth dy fallback
-        // when image-based registration (Vision, correlation) fails on uniform content.
-        // Uses scrollingDeltaY (pixel-precise) rather than deltaY (line-based).
-        totalScrollDeltaY = 0
-        scrollEventMonitor = NSEvent.addGlobalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
-            self?.totalScrollDeltaY += Double(event.scrollingDeltaY)
-        }
-
-        captureTask = Task {
-            guard let engine = captureEngine else {
-                NSLog("TermSnap: No captureEngine")
-                return
-            }
-
-            do {
-                NSLog("TermSnap: Starting stream")
-                // Exclude our own UI from the capture stream
-                let excludeWindows = [previewPanel, borderWindow].compactMap { $0 }
-                let stream = try await engine.startStream(display: display, area: captureArea, excluding: excludeWindows)
-
-                NSLog("TermSnap: Stream started, waiting for frames, captureArea=\(captureArea)")
-                var frameCount = 0
-
-                for await frame in stream {
-                    if state != .scrolling { break }
-                    frameCount += 1
-
-                    // Pass cumulative scroll displacement to engine as fallback hint
-                    stitchingEngine.hintedDy = totalScrollDeltaY
-
-                    if let result = await stitchingEngine.addFrame(frame) {
-                        previewPanel?.updateImage(result, lastDy: stitchingEngine.lastDy, frameCount: frameCount, area: captureArea, rawFrame: frame)
-                    }
-
-                    // Auto-finish when frames stop changing (user reached scroll boundary or paused)
-                    if stitchingEngine.shouldAutoFinish {
-                        NSLog("TermSnap: Auto-finishing after \(stitchingEngine.idleFrameCount) idle frames")
-                        await MainActor.run { [weak self] in
-                            self?.finishScrolling()
-                        }
-                        break
-                    }
-                }
-                NSLog("TermSnap: Stream ended after \(frameCount) frames")
-            } catch {
-                NSLog("TermSnap: Streaming error: \(error)")
-                await MainActor.run {
-                    self.cancel()
-                }
-            }
-        }
-    }
-
-    private func showBorderWindow(for rect: NSRect) {
-        // Convert local rect to screen coordinates for border window positioning
-        let globalRect = window?.convertToScreen(convert(rect, to: nil)) ?? rect
-        let borderWin = NSWindow(
-            contentRect: globalRect,
-            styleMask: [.borderless],
-            backing: .buffered,
-            defer: false
-        )
-        borderWin.isOpaque = false
-        borderWin.backgroundColor = .clear
-        borderWin.level = .floating
-        borderWin.ignoresMouseEvents = true
-        borderWin.hasShadow = false
-        borderWin.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-
-        // Content view with just a colored border
-        let borderView = NSView(frame: NSRect(origin: .zero, size: globalRect.size))
-        borderView.wantsLayer = true
-        borderView.layer?.borderColor = NSColor.systemBlue.cgColor
-        borderView.layer?.borderWidth = 2
-        borderView.layer?.cornerRadius = 0
-        borderWin.contentView = borderView
-
-        borderWin.orderFront(nil)
-        borderWindow = borderWin
-    }
-
-    private var isFinishingScrolling = false
-
-    func finishScrolling() {
-        guard !isFinishingScrolling, state == .scrolling else { return }
-        isFinishingScrolling = true
-        state = .annotating // prevent global/local Enter monitors from re-triggering
-
-        if let monitor = scrollEventMonitor {
-            NSEvent.removeMonitor(monitor)
-            scrollEventMonitor = nil
-        }
-
-        previewPanel?.orderOut(nil)
-        previewPanel = nil
-        borderWindow?.orderOut(nil)
-        borderWindow = nil
-
-        captureTask?.cancel()
-
-        Task {
-            // Wait for the capture loop to exit, then stop the stream
-            await captureEngine?.stopStream()
-            let finalImage = stitchingEngine.finalize()
-            NSLog("TermSnap: finishScrolling finalImage=\(finalImage != nil ? "\(finalImage!.width)x\(finalImage!.height)" : "nil")")
-            if let finalImage = finalImage {
-                let scale = screen.backingScaleFactor
-                let pointSize = NSImage(cgImage: finalImage, size: NSSize(
-                    width: CGFloat(finalImage.width) / scale,
-                    height: CGFloat(finalImage.height) / scale
-                ))
-                await MainActor.run {
-                    let stitchWindow = StitchedAnnotationWindow(image: pointSize, screen: screen)
-                    stitchWindow.show()
-                    stitchWindow.onDeactivate = { [weak self] in
-                        self?.cleanupOverlay()
-                    }
-                }
-            } else {
-                await MainActor.run {
-                    self.cancel()
-                }
-            }
-        }
-    }
-
-    /// Called by StitchedAnnotationWindow when it's done, to fully clean up the overlay.
-    private func cleanupOverlay() {
-        if let ow = window as? OverlayWindow {
-            ow.deactivate()
-        }
-    }
-
     // MARK: - Keyboard
 
     override func keyDown(with event: NSEvent) {
@@ -725,8 +499,6 @@ class OverlayView: NSView {
         } else if event.keyCode == 36 || event.keyCode == 76 { // Return / Enter
             if state == .annotating {
                 copyToClipboard()
-            } else if state == .scrolling {
-                finishScrolling()
             }
         }
     }
@@ -736,21 +508,6 @@ class OverlayView: NSView {
     }
 
     @objc func cancel() {
-        if state == .scrolling {
-            if let monitor = scrollEventMonitor {
-                NSEvent.removeMonitor(monitor)
-                scrollEventMonitor = nil
-            }
-            captureTask?.cancel()
-            captureTask = nil
-            previewPanel?.orderOut(nil)
-            previewPanel = nil
-            borderWindow?.orderOut(nil)
-            borderWindow = nil
-            Task {
-                await captureEngine?.stopStream()
-            }
-        }
         if let ow = window as? OverlayWindow {
             ow.deactivate()
         } else {
