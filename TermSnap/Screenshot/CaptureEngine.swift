@@ -37,7 +37,6 @@ class CaptureEngine {
                     !($0.title ?? "").isEmpty &&
                     $0.frame.width > 10 && 
                     $0.frame.height > 10 &&
-                    $0.owningApplication?.bundleIdentifier != Bundle.main.bundleIdentifier &&
                     $0.owningApplication?.bundleIdentifier != "com.apple.dock"
                 }
                 let (cgImage, nsImage) = try await captureDisplay(display)
