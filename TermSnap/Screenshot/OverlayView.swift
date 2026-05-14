@@ -11,6 +11,8 @@ class OverlayView: NSView {
     private let mode: CaptureMode
     private weak var captureEngine: CaptureEngine?
 
+    private var isWindowSelection = false
+
     enum CaptureState {
         case selecting   // Hovering / dragging to define the capture region
         case annotating  // Region confirmed — drawing tools active
@@ -158,18 +160,50 @@ class OverlayView: NSView {
             return
         }
 
-        let path = CGPath(rect: rect, transform: nil)
+        // Use rounded corners if we're hovering over a window or if a window was selected
+        let isRounded = (state == .selecting && hoveredWindow != nil) || (state == .annotating && isWindowSelection)
+        let radius: CGFloat = isRounded ? 10.0 : 0.0
+
+        let path = CGPath(roundedRect: rect, cornerWidth: radius, cornerHeight: radius, transform: nil)
         highlightLayer.path = path
         highlightLayer.isHidden = false
 
         let maskPath = CGMutablePath()
         maskPath.addRect(bounds)
-        maskPath.addRect(rect)
+        maskPath.addRoundedRect(in: rect, cornerWidth: radius, cornerHeight: radius)
 
         let maskLayer = CAShapeLayer()
         maskLayer.path = maskPath
         maskLayer.fillRule = .evenOdd
         darkOverlay.mask = maskLayer
+    }
+    override func rightMouseDown(with event: NSEvent) {
+        resetSelection(with: event)
+    }
+
+    private func resetSelection(with event: NSEvent?) {
+        state = .selecting
+        currentRect = .zero
+        isWindowSelection = false
+        
+        annotationView.isHidden = true
+        annotationView.shapes.removeAll()
+        
+        toolbarView?.removeFromSuperview()
+        toolbarView = nil
+        
+        dimensionLabel?.removeFromSuperview()
+        dimensionLabel = nil
+        
+        handleLayers.values.forEach { $0.removeFromSuperlayer() }
+        handleLayers.removeAll()
+        
+        updateSelection(rect: nil)
+        
+        // Ensure we're ready for new window hovering by simulating a mouse move
+        if let event = event {
+            mouseMoved(with: event)
+        }
     }
 
     // MARK: - Mouse Event Handling
@@ -206,6 +240,7 @@ class OverlayView: NSView {
 
             if dragRect.width > 5 || dragRect.height > 5 {
                 didDrag = true
+                isWindowSelection = false // Manual drag is not a window selection
                 hoveredWindow = nil
                 hoveredRect = nil
                 currentRect = dragRect
@@ -217,6 +252,7 @@ class OverlayView: NSView {
             let dx = current.x - from.x
             let dy = current.y - from.y
             
+            isWindowSelection = false // Resizing converts to manual selection
             let resizer = SelectionResizer(selectionRect: startRect)
             currentRect = resizer.rectByResizing(startRect, handle: handle, delta: NSPoint(x: dx, y: dy))
             updateSelection(rect: currentRect)
@@ -233,6 +269,7 @@ class OverlayView: NSView {
             if didDrag && currentRect.width > 5 && currentRect.height > 5 {
                 enterAnnotationState(with: currentRect)
             } else if let hRect = hoveredRect {
+                isWindowSelection = true // Recognized window clicked
                 enterAnnotationState(with: hRect)
             }
             startPoint = nil
@@ -453,6 +490,17 @@ class OverlayView: NSView {
             space: CGColorSpaceCreateDeviceRGB(),
             bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
         ) else { return nil }
+
+        // 0. If it's a window selection, apply a rounded corner mask
+        if isWindowSelection {
+            let cornerRadius = 10.0 * sx // Standard macOS window radius scaled
+            let path = CGPath(roundedRect: CGRect(x: 0, y: 0, width: CGFloat(pixelWidth), height: CGFloat(pixelHeight)),
+                              cornerWidth: cornerRadius,
+                              cornerHeight: cornerRadius,
+                              transform: nil)
+            ctx.addPath(path)
+            ctx.clip()
+        }
 
         // 1. Draw background at full 2x resolution (points * backingScale)
         ctx.draw(cropped, in: CGRect(x: 0, y: 0, width: CGFloat(pixelWidth), height: CGFloat(pixelHeight)))
