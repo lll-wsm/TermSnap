@@ -6,7 +6,7 @@ class StatusBarController: NSObject {
     private let captureEngine = CaptureEngine()
 
     func setup() {
-        statusItem = NSStatusBar.system.statusItem(withLength: 28.0)
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = statusItem?.button {
             button.image = NSImage(named: "PhysalisStatusIcon")
             button.image?.size = NSSize(width: 18, height: 18)
