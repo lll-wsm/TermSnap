@@ -120,14 +120,10 @@ class CaptureEngine {
         config.width = Int(Double(display.width) * backingScale)
         config.height = Int(Double(display.height) * backingScale)
         config.pixelFormat = kCVPixelFormatType_32BGRA
-
-        // Hide cursor before capture so it doesn't appear in the screenshot
-        CGDisplayHideCursor(CGMainDisplayID())
+        config.showsCursor = false
 
         let image = try await SCScreenshotManager.captureImage(contentFilter: filter,
                                                          configuration: config)
-
-        CGDisplayShowCursor(CGMainDisplayID())
 
         // Size the NSImage at the screen's point dimensions so the backing scale is implicit
         let pointSize = screen.frame.size
