@@ -124,7 +124,6 @@ class OverlayView: NSView {
             guard isTracking else { return }
             guard startPoint == nil else { return }
             let point = convert(event.locationInWindow, from: nil)
-            let sckPoint = convertToSCK(point)
             
             if let window = findTopmostWindow(at: point) {
                 if window.windowID != hoveredWindow?.windowID {

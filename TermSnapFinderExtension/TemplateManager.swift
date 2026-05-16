@@ -2,6 +2,7 @@ import Foundation
 import AppKit
 import Combine
 import OSLog
+import UniformTypeIdentifiers
 
 class TemplateManager: ObservableObject {
     static let shared = TemplateManager()
@@ -136,6 +137,9 @@ class TemplateManager: ObservableObject {
             }
         }
         
-        return NSWorkspace.shared.icon(forFileType: template.pathExtension)
+        if let utType = UTType(filenameExtension: template.pathExtension) {
+            return NSWorkspace.shared.icon(for: utType)
+        }
+        return NSWorkspace.shared.icon(for: .item)
     }
 }

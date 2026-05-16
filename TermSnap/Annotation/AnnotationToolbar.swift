@@ -299,7 +299,7 @@ class AnnotationToolbar: NSView {
 
     @objc private func selectWidth(_ sender: NSButton) {
         annotationView.currentLineWidth = CGFloat(sender.tag - 200)
-        for case let container as NSView in stackView.arrangedSubviews {
+        for container in stackView.arrangedSubviews {
             guard let btn = container.subviews.first as? NSButton, btn.tag >= 200, btn.tag < 300 else { continue }
             let isSelected = btn.tag == sender.tag
             btn.layer?.opacity = isSelected ? 1.0 : 0.4
