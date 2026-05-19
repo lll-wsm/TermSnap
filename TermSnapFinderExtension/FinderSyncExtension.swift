@@ -39,6 +39,7 @@ class FinderSyncExtension: FIFinderSync {
         // Manual check of settings to be safe
         let menuLayout = defaults?.string(forKey: "menuLayout") ?? "nested"
         let showTerminalMenu = defaults?.object(forKey: "showTerminalMenu") == nil ? true : (defaults?.bool(forKey: "showTerminalMenu") ?? true)
+        let showCopyPathMenu = defaults?.object(forKey: "showCopyPathMenu") == nil ? true : (defaults?.bool(forKey: "showCopyPathMenu") ?? true)
         let showCreateFileMenu = defaults?.object(forKey: "showCreateFileMenu") == nil ? true : (defaults?.bool(forKey: "showCreateFileMenu") ?? true)
         let showFinderIcon = defaults?.bool(forKey: "showFinderIcon") ?? false
         
@@ -60,6 +61,15 @@ class FinderSyncExtension: FIFinderSync {
             item.target = self
             if showFinderIcon {
                 item.image = NSImage(systemSymbolName: "terminal", accessibilityDescription: nil)
+            }
+        }
+        
+        if showCopyPathMenu {
+            let title = NSLocalizedString("Copy Path", comment: "")
+            let item = containerMenu.addItem(withTitle: title, action: #selector(copyPathAction(_:)), keyEquivalent: "")
+            item.target = self
+            if showFinderIcon {
+                item.image = NSImage(systemSymbolName: "doc.on.doc", accessibilityDescription: nil)
             }
         }
         
@@ -104,6 +114,14 @@ class FinderSyncExtension: FIFinderSync {
         }
     }
 
+    @objc func copyPathAction(_ sender: AnyObject?) {
+        let path = getSelectedURL().path
+        os_log("TermSnapExtension: Copying path: %{public}s", log: logger, type: .info, path)
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(path, forType: .string)
+    }
+
     @objc func createFileAction(_ sender: AnyObject?) {
         os_log("TermSnapExtension: createFileAction triggered", log: logger, type: .info)
 
@@ -139,6 +157,14 @@ class FinderSyncExtension: FIFinderSync {
             if FileManager.default.fileExists(atPath: selectedURL.path, isDirectory: &isDir), isDir.boolValue {
                 return selectedURL
             }
+        }
+        return controller.targetedURL() ?? URL(fileURLWithPath: NSHomeDirectory())
+    }
+    
+    private func getSelectedURL() -> URL {
+        let controller = FIFinderSyncController.default()
+        if let selectedURL = controller.selectedItemURLs()?.first {
+            return selectedURL
         }
         return controller.targetedURL() ?? URL(fileURLWithPath: NSHomeDirectory())
     }

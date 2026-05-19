@@ -125,6 +125,7 @@ struct ContextMenuSettingsView: View {
     @StateObject private var templateManager = TemplateManager.shared
     @State private var enabledTemplates = AppSettings.enabledTemplates
     @State private var showTerminalMenu = AppSettings.showTerminalMenu
+    @State private var showCopyPathMenu = AppSettings.showCopyPathMenu
     @State private var showCreateFileMenu = AppSettings.showCreateFileMenu
     @State private var menuLayout = AppSettings.menuLayout
     @State private var showTemplateIcons = AppSettings.showTemplateIcons
@@ -148,6 +149,7 @@ struct ContextMenuSettingsView: View {
             
             Section {
                 Toggle(NSLocalizedString("Open Terminal Here", comment: ""), isOn: $showTerminalMenu)
+                Toggle(NSLocalizedString("Copy Path", comment: ""), isOn: $showCopyPathMenu)
                 Toggle(NSLocalizedString("Create New File (Submenu)", comment: ""), isOn: $showCreateFileMenu)
             } header: {
                 Label(NSLocalizedString("Menu Items", comment: ""), systemImage: "list.bullet")
@@ -195,6 +197,7 @@ struct ContextMenuSettingsView: View {
         .onAppear { templateManager.refreshTemplates() }
         .onChange(of: enabledTemplates) { _, newValue in AppSettings.enabledTemplates = newValue }
         .onChange(of: showTerminalMenu) { _, newValue in AppSettings.showTerminalMenu = newValue }
+        .onChange(of: showCopyPathMenu) { _, newValue in AppSettings.showCopyPathMenu = newValue }
         .onChange(of: showCreateFileMenu) { _, newValue in AppSettings.showCreateFileMenu = newValue }
         .onChange(of: menuLayout) { _, newValue in AppSettings.menuLayout = newValue }
         .onChange(of: showTemplateIcons) { _, newValue in AppSettings.showTemplateIcons = newValue }

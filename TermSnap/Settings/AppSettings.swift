@@ -44,6 +44,10 @@ enum AppSettings {
         get { defaults.object(forKey: "showTerminalMenu") == nil ? true : defaults.bool(forKey: "showTerminalMenu") }
         set { defaults.set(newValue, forKey: "showTerminalMenu") }
     }
+    static var showCopyPathMenu: Bool {
+        get { defaults.object(forKey: "showCopyPathMenu") == nil ? true : defaults.bool(forKey: "showCopyPathMenu") }
+        set { defaults.set(newValue, forKey: "showCopyPathMenu") }
+    }
     static var menuLayout: String {
         get { defaults.string(forKey: "menuLayout") ?? "nested" }
         set { defaults.set(newValue, forKey: "menuLayout") }
