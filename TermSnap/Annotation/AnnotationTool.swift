@@ -7,7 +7,7 @@ enum AnnotationTool: String, CaseIterable {
     case line
     case pen
     case text
-    case mosaic
+    case eraser
 
     var systemImage: String {
         switch self {
@@ -17,7 +17,7 @@ enum AnnotationTool: String, CaseIterable {
         case .line: return "line.diagonal"
         case .pen: return "pencil.tip"
         case .text: return "text.cursor"
-        case .mosaic: return "square.grid.3x3.fill"
+        case .eraser: return "eraser"
         }
     }
 
@@ -29,7 +29,7 @@ enum AnnotationTool: String, CaseIterable {
         case .line: return NSLocalizedString("Line", comment: "")
         case .pen: return NSLocalizedString("Freehand", comment: "")
         case .text: return NSLocalizedString("Text", comment: "")
-        case .mosaic: return NSLocalizedString("Mosaic", comment: "")
+        case .eraser: return NSLocalizedString("Eraser", comment: "")
         }
     }
 }

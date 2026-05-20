@@ -31,6 +31,8 @@ Icon?
 
 # --- Gemini CLI / AI Tools ---
 .gemini/
+.anthropic/
+.antigravitycli/
 .claude/
 CLAUDE.md
 AGENTS.md

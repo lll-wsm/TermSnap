@@ -148,7 +148,13 @@ class OverlayView: NSView {
         case .annotating:
             let point = convert(event.locationInWindow, from: nil)
             let resizer = SelectionResizer(selectionRect: currentRect)
-            resizer.cursorAt(point).set()
+            if let handle = resizer.handleAt(point) {
+                handle.cursor().set()
+            } else if currentRect.contains(point) && annotationView.currentTool == .eraser {
+                NSCursor.eraser.set()
+            } else {
+                NSCursor.arrow.set()
+            }
         }
     }
 
@@ -359,7 +365,7 @@ class OverlayView: NSView {
 
         annotationView.frame = rect
         annotationView.isHidden = false
-        annotationView.pixelatedImage = generatePixelatedImage(for: rect)
+        annotationView.blurredImage = generateBlurredImage(for: rect)
 
         showToolbar(for: rect)
         window?.makeFirstResponder(self)
@@ -442,7 +448,7 @@ class OverlayView: NSView {
     private var scaleX: CGFloat { CGFloat(backgroundCGImage.width) / bounds.width }
     private var scaleY: CGFloat { CGFloat(backgroundCGImage.height) / bounds.height }
 
-    private func generatePixelatedImage(for cropRect: NSRect) -> CGImage? {
+    private func generateBlurredImage(for cropRect: NSRect) -> CGImage? {
         let sx = scaleX
         let sy = scaleY
         
@@ -455,14 +461,15 @@ class OverlayView: NSView {
         guard let cropped = backgroundCGImage.cropping(to: pixelRect) else { return nil }
 
         let ciImage = CIImage(cgImage: cropped)
-        let filter = CIFilter(name: "CIPixellate")!
+        let filter = CIFilter(name: "CIGaussianBlur")!
         filter.setValue(ciImage, forKey: kCIInputImageKey)
-        filter.setValue(12.0 * sx, forKey: kCIInputScaleKey)
+        filter.setValue(15.0 * sx, forKey: kCIInputRadiusKey)
 
         let context = CIContext()
+        let extent = ciImage.extent
         guard let output = filter.outputImage,
-              let pixellated = context.createCGImage(output, from: output.extent) else { return nil }
-        return pixellated
+              let blurred = context.createCGImage(output, from: extent) else { return nil }
+        return blurred
     }
 
     private func renderFinalImage() -> NSImage? {

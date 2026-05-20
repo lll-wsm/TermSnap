@@ -64,30 +64,52 @@ struct TextShape: AnnotationShape {
     var origin: NSPoint
 
     private var fontSize: CGFloat { 14 + lineWidth * 2 }
+    
+    private var font: NSFont {
+        NSFont.systemFont(ofSize: fontSize, weight: .bold)
+    }
 
     func draw(in context: CGContext) {
         let attr: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: fontSize, weight: .bold),
+            .font: font,
             .foregroundColor: color
         ]
-        let str = NSAttributedString(string: text, attributes: attr)
-        let line = CTLineCreateWithAttributedString(str)
+        
+        let lines = text.components(separatedBy: .newlines)
+        let lineHeight = font.boundingRectForFont.height
 
         context.saveGState()
-        // AnnotationView uses a flipped coordinate system (isFlipped = true).
-        // CTLineDraw draws with the current CTM, so in a flipped context the
-        // glyphs render upside-down. Flip the text matrix to compensate.
-        var textMatrix = CGAffineTransform(translationX: origin.x, y: origin.y + fontSize)
-        textMatrix = textMatrix.scaledBy(x: 1, y: -1)
-        context.textMatrix = textMatrix
-        CTLineDraw(line, context)
+        for (index, lineText) in lines.enumerated() {
+            let str = NSAttributedString(string: lineText, attributes: attr)
+            let line = CTLineCreateWithAttributedString(str)
+            let lineYOffset = CGFloat(index) * lineHeight
+            
+            // AnnotationView uses a flipped coordinate system (isFlipped = true).
+            // CTLineDraw draws with the current CTM, so in a flipped context the
+            // glyphs render upside-down. Flip the text matrix to compensate.
+            var textMatrix = CGAffineTransform(translationX: origin.x, y: origin.y + fontSize + lineYOffset)
+            textMatrix = textMatrix.scaledBy(x: 1, y: -1)
+            context.textMatrix = textMatrix
+            CTLineDraw(line, context)
+        }
         context.restoreGState()
     }
 
     func contains(_ point: NSPoint) -> Bool {
-        let approxWidth = CGFloat(text.count) * fontSize * 0.6
+        let lines = text.components(separatedBy: .newlines)
+        let lineHeight = font.boundingRectForFont.height
+        
+        var maxApproxWidth: CGFloat = 0
+        for lineText in lines {
+            let approxWidth = CGFloat(lineText.count) * fontSize * 0.6
+            if approxWidth > maxApproxWidth {
+                maxApproxWidth = approxWidth
+            }
+        }
+        
+        let totalHeight = CGFloat(lines.count) * lineHeight
         let boundingRect = NSRect(x: origin.x, y: origin.y,
-                                  width: approxWidth, height: fontSize * 1.2)
+                                  width: maxApproxWidth, height: totalHeight)
         return boundingRect.contains(point)
     }
 }
@@ -161,29 +183,45 @@ struct LineShape: AnnotationShape {
     }
 }
 
-// MosaicShape ignores color/lineWidth — it renders pixelatedImage clipped to rect.
-class MosaicShape: AnnotationShape {
+// EraserShape applies Gaussian blur clipped to a freehand path.
+struct EraserShape: AnnotationShape {
     var color: NSColor
     var lineWidth: CGFloat
-    let rect: NSRect
-    let pixelatedImage: CGImage
-
-    init(rect: NSRect, pixelatedImage: CGImage) {
-        self.color = .clear
-        self.lineWidth = 0
-        self.rect = rect
-        self.pixelatedImage = pixelatedImage
-    }
+    var points: [NSPoint]
+    let blurredImage: CGImage
+    let canvasSize: NSSize
 
     func draw(in context: CGContext) {
+        guard points.count > 0 else { return }
         context.saveGState()
-        context.clip(to: rect)
-        context.draw(pixelatedImage, in: rect)
+
+        let path = CGMutablePath()
+        path.move(to: points[0])
+        for i in 1..<points.count {
+            path.addLine(to: points[i])
+        }
+
+        context.addPath(path)
+        context.setLineWidth(lineWidth)
+        context.setLineCap(.round)
+        context.setLineJoin(.round)
+        
+        context.replacePathWithStrokedPath()
+        context.clip()
+
+        let rect = CGRect(origin: .zero, size: canvasSize)
+        context.draw(blurredImage, in: rect)
+        
         context.restoreGState()
     }
 
     func contains(_ point: NSPoint) -> Bool {
-        rect.contains(point)
+        for i in 0..<(points.count - 1) {
+            if distanceFromPoint(toLine: (points[i], points[i + 1]), point: point) < lineWidth + 5 {
+                return true
+            }
+        }
+        return false
     }
 }
 

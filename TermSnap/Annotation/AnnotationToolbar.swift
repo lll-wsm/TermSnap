@@ -184,6 +184,9 @@ class AnnotationToolbar: NSView {
             btn.action = #selector(selectWidth(_:))
             btn.toolTip = "\(width)px"
             btn.setContentHuggingPriority(.required, for: .horizontal)
+            
+            let isSelected = CGFloat(width) == annotationView.currentLineWidth
+            btn.layer?.opacity = isSelected ? 1.0 : 0.4
 
             container.addSubview(btn)
             stackView.addArrangedSubview(container)
@@ -289,6 +292,7 @@ class AnnotationToolbar: NSView {
     // MARK: - Actions
 
     @objc private func selectTool(_ sender: NSButton) {
+        annotationView.commitActiveTextFields()
         let tool = AnnotationTool.allCases[sender.tag]
         annotationView.currentTool = tool
         for btn in stackView.arrangedSubviews.compactMap({ $0 as? NSButton }) {
@@ -298,6 +302,7 @@ class AnnotationToolbar: NSView {
     }
 
     @objc private func selectWidth(_ sender: NSButton) {
+        annotationView.commitActiveTextFields()
         annotationView.currentLineWidth = CGFloat(sender.tag - 200)
         for container in stackView.arrangedSubviews {
             guard let btn = container.subviews.first as? NSButton, btn.tag >= 200, btn.tag < 300 else { continue }
@@ -306,9 +311,25 @@ class AnnotationToolbar: NSView {
         }
     }
 
-    @objc private func undoAction() { annotationView.undo() }
-    @objc private func redoAction() { annotationView.redo() }
+    @objc private func undoAction() {
+        annotationView.commitActiveTextFields()
+        annotationView.undo()
+    }
+
+    @objc private func redoAction() {
+        annotationView.commitActiveTextFields()
+        annotationView.redo()
+    }
+
     @objc private func cancelAction() { onCancel?() }
-    @objc private func saveAction() { onSave?() }
-    @objc private func copyAction() { onCopy?() }
+
+    @objc private func saveAction() {
+        annotationView.commitActiveTextFields()
+        onSave?()
+    }
+
+    @objc private func copyAction() {
+        annotationView.commitActiveTextFields()
+        onCopy?()
+    }
 }

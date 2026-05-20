@@ -4,9 +4,28 @@ class AnnotationView: NSView, NSTextFieldDelegate {
     var shapes: [AnnotationShape] = []
     var undoStack: [AnnotationShape] = []
 
-    var currentTool: AnnotationTool = .arrow
-    var currentColor: NSColor = .red
-    var currentLineWidth: CGFloat = 3
+    var currentTool: AnnotationTool = .arrow {
+        didSet {
+            window?.invalidateCursorRects(for: self)
+        }
+    }
+    var currentColor: NSColor = .red {
+        didSet {
+            for entry in textFields {
+                entry.field.textColor = currentColor
+            }
+        }
+    }
+    var currentLineWidth: CGFloat = 2 {
+        didSet {
+            for entry in textFields {
+                let fontSize = 14 + currentLineWidth * 2
+                let font = NSFont.systemFont(ofSize: fontSize, weight: .bold)
+                entry.field.font = font
+                controlTextDidChange(Notification(name: NSControl.textDidChangeNotification, object: entry.field, userInfo: nil))
+            }
+        }
+    }
 
     private var dragStart: NSPoint?
     private var currentPenPoints: [NSPoint] = []
@@ -28,7 +47,21 @@ class AnnotationView: NSView, NSTextFieldDelegate {
         let point = convert(event.locationInWindow, from: nil)
         dragStart = point
 
-        if currentTool == .pen {
+        if !textFields.isEmpty {
+            var clickedInside = false
+            for entry in textFields {
+                if entry.container.frame.contains(point) {
+                    clickedInside = true
+                    break
+                }
+            }
+            if !clickedInside {
+                window?.makeFirstResponder(self)
+                return
+            }
+        }
+
+        if currentTool == .pen || currentTool == .eraser {
             currentPenPoints = [point]
         } else if currentTool == .text {
             addTextShape(at: point)
@@ -59,11 +92,12 @@ class AnnotationView: NSView, NSTextFieldDelegate {
             tempShape = PenShape(color: currentColor, lineWidth: currentLineWidth, points: currentPenPoints)
         case .text:
             break
-        case .mosaic:
-            let rect = NSRect(x: min(start.x, current.x), y: min(start.y, current.y),
-                              width: abs(current.x - start.x), height: abs(current.y - start.y))
-            if rect.width > 5 && rect.height > 5, let pixImg = pixelatedImage {
-                tempShape = MosaicShape(rect: rect, pixelatedImage: pixImg)
+        case .eraser:
+            currentPenPoints.append(current)
+            if let blurImg = blurredImage {
+                tempShape = EraserShape(color: currentColor, lineWidth: currentLineWidth * 5 + 10,
+                                        points: currentPenPoints, blurredImage: blurImg,
+                                        canvasSize: bounds.size)
             }
         }
         needsDisplay = true
@@ -99,6 +133,9 @@ class AnnotationView: NSView, NSTextFieldDelegate {
         field.isEditable = true
         field.delegate = self
         field.tag = textFields.count
+        field.usesSingleLineMode = false
+        field.cell?.isScrollable = false
+        field.cell?.wraps = true
         field.sizeToFit()
 
         container.addSubview(field)
@@ -110,13 +147,19 @@ class AnnotationView: NSView, NSTextFieldDelegate {
 
     private var textFields: [(field: NSTextField, container: NSView, point: NSPoint)] = []
 
-    /// Pixelated version of the captured area, used by MosaicShape for rendering.
+    /// Blurred version of the captured area, used by EraserShape for rendering.
     /// Set by OverlayView when entering annotation state.
-    var pixelatedImage: CGImage?
+    var blurredImage: CGImage?
 
-    /// Capso-style flipped coordinate system (top-left origin) ensures
-    /// convert() and draw(_:) use the same coordinate space.
     override var isFlipped: Bool { true }
+    override var acceptsFirstResponder: Bool { true }
+
+    override func resetCursorRects() {
+        super.resetCursorRects()
+        if currentTool == .eraser {
+            addCursorRect(bounds, cursor: NSCursor.eraser)
+        }
+    }
 
     func undo() {
         guard let last = shapes.popLast() else { return }
@@ -128,6 +171,20 @@ class AnnotationView: NSView, NSTextFieldDelegate {
         guard let shape = undoStack.popLast() else { return }
         shapes.append(shape)
         needsDisplay = true
+    }
+
+    func commitActiveTextFields() {
+        if !textFields.isEmpty {
+            window?.makeFirstResponder(self)
+        }
+    }
+
+    func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+        if commandSelector == #selector(NSResponder.insertNewline(_:)) {
+            textView.insertNewline(nil)
+            return true
+        }
+        return false
     }
 
     func controlTextDidEndEditing(_ obj: Notification) {
@@ -158,11 +215,44 @@ class AnnotationView: NSView, NSTextFieldDelegate {
         let lineHeight = font.boundingRectForFont.height
         let padding: CGFloat = 6
 
-        let textWidth = (field.stringValue as NSString).size(withAttributes: [.font: font]).width
-        let newFieldWidth = max(40, textWidth + padding)
-        let newContainerWidth = newFieldWidth + padding
+        let text: String
+        if let editor = field.currentEditor() {
+            text = editor.string
+        } else {
+            text = field.stringValue
+        }
 
-        field.setFrameSize(NSSize(width: newFieldWidth, height: lineHeight + padding))
-        entry.container.setFrameSize(NSSize(width: newContainerWidth, height: lineHeight + padding))
+        let lines = text.components(separatedBy: .newlines)
+        var maxLineWidth: CGFloat = 0
+        for line in lines {
+            let width = (line as NSString).size(withAttributes: [.font: font]).width
+            if width > maxLineWidth {
+                maxLineWidth = width
+            }
+        }
+
+        let newFieldWidth = max(40, maxLineWidth + padding)
+        let newContainerWidth = newFieldWidth + padding
+        let lineCount = max(1, lines.count)
+        let totalHeight = CGFloat(lineCount) * lineHeight
+
+        field.setFrameSize(NSSize(width: newFieldWidth, height: totalHeight + padding))
+        entry.container.setFrameSize(NSSize(width: newContainerWidth, height: totalHeight + padding))
+    }
+}
+
+extension NSCursor {
+    static var eraser: NSCursor {
+        if let image = NSImage(systemSymbolName: "eraser", accessibilityDescription: nil) {
+            let size = NSSize(width: 24, height: 24)
+            let resizedImage = NSImage(size: size)
+            resizedImage.lockFocus()
+            image.draw(in: NSRect(origin: .zero, size: size))
+            resizedImage.unlockFocus()
+            // The SF Symbol "eraser" tip is at the bottom-left corner of the image,
+            // which corresponds to coordinate (2, 22) in top-left-based Cocoa cursor space.
+            return NSCursor(image: resizedImage, hotSpot: NSPoint(x: 2, y: 22))
+        }
+        return .crosshair
     }
 }
