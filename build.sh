@@ -35,11 +35,11 @@ echo "🚀 Starting build for ${PROJECT_NAME} (${CONFIGURATION})..."
 
 # 1. Clean build directory
 echo "🧹 Cleaning..."
-xcodebuild -project "${PROJECT_NAME}.xcodeproj" -scheme "${SCHEME}" -configuration "${CONFIGURATION}" clean
+xcodebuild -project "${PROJECT_NAME}.xcodeproj" -scheme "${SCHEME}" -configuration "${CONFIGURATION}" -allowProvisioningUpdates clean
 
 # 2. Build the project
 echo "🏗️ Building..."
-xcodebuild -project "${PROJECT_NAME}.xcodeproj" -scheme "${SCHEME}" -configuration "${CONFIGURATION}" build
+xcodebuild -project "${PROJECT_NAME}.xcodeproj" -scheme "${SCHEME}" -configuration "${CONFIGURATION}" -allowProvisioningUpdates build
 
 # 3. Locate build artifact in DerivedData
 echo "🔍 Locating build artifact..."
