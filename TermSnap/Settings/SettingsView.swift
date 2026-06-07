@@ -157,8 +157,14 @@ struct ContextMenuSettingsView: View {
             
             if showCreateFileMenu {
                 Section {
-                    Button(NSLocalizedString("Open Templates Folder", comment: "")) {
-                        templateManager.openTemplatesFolder()
+                    HStack {
+                        Button(NSLocalizedString("Open Templates Folder", comment: "")) {
+                            templateManager.openTemplatesFolder()
+                        }
+                        Spacer()
+                        Button(NSLocalizedString("Refresh", comment: "")) {
+                            templateManager.refreshTemplates()
+                        }
                     }
                     
                     List {
