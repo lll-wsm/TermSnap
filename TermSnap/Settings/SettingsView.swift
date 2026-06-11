@@ -6,14 +6,14 @@ struct SettingsView: View {
     enum Tab: String, CaseIterable {
         case screenshot = "Screenshot"
         case contextMenu = "Context Menu"
-        
+
         var icon: String {
             switch self {
             case .screenshot: return "camera"
             case .contextMenu: return "computermouse"
             }
         }
-        
+
         var localizedName: String {
             switch self {
             case .screenshot: return NSLocalizedString("Screenshot", comment: "")
@@ -127,34 +127,50 @@ struct ContextMenuSettingsView: View {
     @State private var showTerminalMenu = AppSettings.showTerminalMenu
     @State private var showCopyPathMenu = AppSettings.showCopyPathMenu
     @State private var showCreateFileMenu = AppSettings.showCreateFileMenu
+    @State private var showClaudeCodeMenu = AppSettings.showClaudeCodeMenu
     @State private var menuLayout = AppSettings.menuLayout
     @State private var showTemplateIcons = AppSettings.showTemplateIcons
+    @State private var showClaudeCodeIcons = AppSettings.showClaudeCodeIcons
     @State private var showFinderIcon = AppSettings.showFinderIcon
+
+    // Claude Code section state
+    @State private var claudeConfig: ClaudeModelsConfig? = ClaudeModelsConfig.load()
+    @State private var disabledProviders = AppSettings.disabledProviders
+    @State private var isCheckingClaude = false
+    @State private var claudeAlertMessage: String?
 
     var body: some View {
         Form {
             Section {
                 Toggle(NSLocalizedString("Show Icon in Context Menu", comment: ""), isOn: $showFinderIcon)
-                
+
                 Picker(NSLocalizedString("Menu Layout", comment: ""), selection: $menuLayout) {
                     Text(NSLocalizedString("Flat", comment: "")).tag("flat")
                     Text(NSLocalizedString("Nested", comment: "")).tag("nested")
                 }
                 .pickerStyle(.segmented)
-                
+
                 Toggle(NSLocalizedString("Show Icons for Templates", comment: ""), isOn: $showTemplateIcons)
+                Toggle(NSLocalizedString("Show Icons for Claude Code", comment: ""), isOn: $showClaudeCodeIcons)
             } header: {
                 Label(NSLocalizedString("Finder Integration", comment: ""), systemImage: "macwindow")
             }
-            
+
             Section {
                 Toggle(NSLocalizedString("Open Terminal Here", comment: ""), isOn: $showTerminalMenu)
                 Toggle(NSLocalizedString("Copy Path", comment: ""), isOn: $showCopyPathMenu)
                 Toggle(NSLocalizedString("Create New File (Submenu)", comment: ""), isOn: $showCreateFileMenu)
+                HStack {
+                    Toggle(NSLocalizedString("Claude Code (Submenu)", comment: ""), isOn: $showClaudeCodeMenu)
+                        .disabled(isCheckingClaude)
+                    if isCheckingClaude {
+                        ProgressView().controlSize(.small)
+                    }
+                }
             } header: {
                 Label(NSLocalizedString("Menu Items", comment: ""), systemImage: "list.bullet")
             }
-            
+
             if showCreateFileMenu {
                 Section {
                     HStack {
@@ -166,7 +182,7 @@ struct ContextMenuSettingsView: View {
                             templateManager.refreshTemplates()
                         }
                     }
-                    
+
                     List {
                         ForEach(templateManager.availableTemplates, id: \.self) { template in
                             HStack {
@@ -197,17 +213,126 @@ struct ContextMenuSettingsView: View {
                     Text(NSLocalizedString("Any file in the Templates folder will appear here. Toggle to show/hide in the Finder menu.", comment: ""))
                 }
             }
+
+            if showClaudeCodeMenu {
+                Section {
+                    if let cfg = claudeConfig, !cfg.providers.isEmpty {
+                        List {
+                            ForEach(cfg.providers, id: \.key) { entry in
+                                HStack(spacing: 8) {
+                                    Image(nsImage: ClaudeProviderIcon.image(
+                                        for: entry.key,
+                                        override: entry.value.iconOverride,
+                                        size: 18
+                                    ))
+                                        .resizable()
+                                        .frame(width: 18, height: 18)
+                                    Text(entry.key)
+                                        .font(.system(.body, design: .monospaced))
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                    Toggle("", isOn: Binding(
+                                        get: { !disabledProviders.contains(entry.key) },
+                                        set: { isEnabled in
+                                            if isEnabled {
+                                                disabledProviders.removeAll { $0 == entry.key }
+                                            } else if !disabledProviders.contains(entry.key) {
+                                                disabledProviders.append(entry.key)
+                                            }
+                                        }
+                                    )).labelsHidden()
+                                }
+                            }
+                        }
+                        .frame(minHeight: 140)
+                    } else {
+                        Text(NSLocalizedString("No providers configured. Open claude-models.json to add some.", comment: ""))
+                            .foregroundColor(.secondary)
+                            .padding(.vertical, 4)
+                    }
+
+                    HStack {
+                        Button(NSLocalizedString("Open claude-models.json", comment: "")) {
+                            openClaudeConfigInEditor()
+                        }
+                        Spacer()
+                        Button(NSLocalizedString("Reload", comment: "")) {
+                            claudeConfig = ClaudeModelsConfig.load()
+                        }
+                    }
+                } header: {
+                    let total = claudeConfig?.providers.count ?? 0
+                    let enabled = total - (claudeConfig?.providers.filter { disabledProviders.contains($0.key) }.count ?? 0)
+                    Text(NSLocalizedString("Claude Code Providers", comment: ""))
+                        + Text(verbatim: " (\(enabled)/\(total))")
+                } footer: {
+                    Text(NSLocalizedString("Toggle providers on/off to control what appears in the Finder right-click menu. Adding a new provider in claude-models.json shows up automatically.", comment: ""))
+                        .foregroundColor(.secondary)
+                }
+            }
         }
         .formStyle(.grouped)
         .navigationTitle(NSLocalizedString("Context Menu", comment: ""))
-        .onAppear { templateManager.refreshTemplates() }
+        .onAppear {
+            templateManager.refreshTemplates()
+            claudeConfig = ClaudeModelsConfig.load()
+        }
         .onChange(of: enabledTemplates) { _, newValue in AppSettings.enabledTemplates = newValue }
         .onChange(of: showTerminalMenu) { _, newValue in AppSettings.showTerminalMenu = newValue }
         .onChange(of: showCopyPathMenu) { _, newValue in AppSettings.showCopyPathMenu = newValue }
         .onChange(of: showCreateFileMenu) { _, newValue in AppSettings.showCreateFileMenu = newValue }
+        .onChange(of: showClaudeCodeMenu) { _, newValue in
+            handleClaudeToggleChange(newValue)
+        }
         .onChange(of: menuLayout) { _, newValue in AppSettings.menuLayout = newValue }
         .onChange(of: showTemplateIcons) { _, newValue in AppSettings.showTemplateIcons = newValue }
+        .onChange(of: showClaudeCodeIcons) { _, newValue in AppSettings.showClaudeCodeIcons = newValue }
         .onChange(of: showFinderIcon) { _, newValue in AppSettings.showFinderIcon = newValue }
+        .onChange(of: disabledProviders) { _, newValue in AppSettings.disabledProviders = newValue }
+        .alert("Claude Code", isPresented: Binding(
+            get: { claudeAlertMessage != nil },
+            set: { if !$0 { claudeAlertMessage = nil } }
+        )) {
+            Button("OK") { claudeAlertMessage = nil }
+        } message: {
+            Text(claudeAlertMessage ?? "")
+        }
+    }
+
+    // MARK: - Claude Code helpers
+
+    /// Toggling ON runs the installation check (background, ~300ms) and reverts on failure.
+    /// Toggling OFF is unconditional — same pattern as the other menu-item toggles.
+    private func handleClaudeToggleChange(_ newValue: Bool) {
+        if !newValue {
+            AppSettings.showClaudeCodeMenu = false
+            return
+        }
+        isCheckingClaude = true
+        DispatchQueue.global(qos: .userInitiated).async {
+            let ok = ClaudeInstallationChecker.isInstalled()
+            DispatchQueue.main.async {
+                isCheckingClaude = false
+                if ok {
+                    AppSettings.showClaudeCodeMenu = true
+                    claudeConfig = ClaudeModelsConfig.load()
+                } else {
+                    showClaudeCodeMenu = false  // visually revert
+                    AppSettings.showClaudeCodeMenu = false
+                    claudeAlertMessage = NSLocalizedString(
+                        "Claude Code (`claude`) was not found in your shell PATH.\n\nInstall it first:\n  npm install -g @anthropic-ai/claude-code\n\nor visit https://claude.com/claude-code",
+                        comment: ""
+                    )
+                }
+            }
+        }
+    }
+
+    private func openClaudeConfigInEditor() {
+        guard let url = ClaudeModelsConfig.configURL else { return }
+        if !FileManager.default.fileExists(atPath: url.path) {
+            ClaudeModelsConfig.bootstrapIfNeeded()
+        }
+        NSWorkspace.shared.open(url)
     }
 }
 
