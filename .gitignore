@@ -54,3 +54,7 @@ build/
 .temp
 tmp/
 *.log
+
+.idea/
+.vscode/
+.codegraph/
