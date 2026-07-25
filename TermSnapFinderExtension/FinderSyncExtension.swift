@@ -42,7 +42,6 @@ class FinderSyncExtension: FIFinderSync {
         let showCopyPathMenu = defaults?.object(forKey: "showCopyPathMenu") == nil ? true : (defaults?.bool(forKey: "showCopyPathMenu") ?? true)
         let showCreateFileMenu = defaults?.object(forKey: "showCreateFileMenu") == nil ? true : (defaults?.bool(forKey: "showCreateFileMenu") ?? true)
         let showFinderIcon = defaults?.bool(forKey: "showFinderIcon") ?? false
-        let showClaudeCodeMenu = defaults?.bool(forKey: "showClaudeCodeMenu") ?? false
         
         if menuLayout == "nested" {
             let mainItem = rootMenu.addItem(withTitle: "TermSnap", action: nil, keyEquivalent: "")
@@ -99,36 +98,7 @@ class FinderSyncExtension: FIFinderSync {
             }
         }
 
-        if showClaudeCodeMenu, let cfg = ClaudeModelsConfig.load(), !cfg.providers.isEmpty {
-            let disabled = Set(AppSettings.disabledProviders)
-            let visibleProviders = cfg.providers.filter { !disabled.contains($0.key) }
-            if !visibleProviders.isEmpty {
-                let title = NSLocalizedString("Claude Code", comment: "")
-                let parentItem = containerMenu.addItem(withTitle: title, action: nil, keyEquivalent: "")
-                if showFinderIcon {
-                    parentItem.image = NSImage(systemSymbolName: "terminal.fill", accessibilityDescription: nil)
-                }
-                let submenu = NSMenu(title: title)
-                containerMenu.setSubmenu(submenu, for: parentItem)
 
-                for (key, provider) in visibleProviders {
-                    let item = submenu.addItem(
-                        withTitle: key,
-                        action: #selector(launchClaudeAction(_:)),
-                        keyEquivalent: ""
-                    )
-                    item.target = self
-                    item.representedObject = key
-                    if AppSettings.showClaudeCodeIcons {
-                        item.image = ClaudeProviderIcon.image(
-                            for: key,
-                            override: provider.iconOverride,
-                            size: 16
-                        )
-                    }
-                }
-            }
-        }
 
         return rootMenu
     }
@@ -154,36 +124,7 @@ class FinderSyncExtension: FIFinderSync {
         pasteboard.setString(path, forType: .string)
     }
 
-    @objc func launchClaudeAction(_ sender: AnyObject?) {
-        guard let menuItem = sender as? NSMenuItem else {
-            os_log("TermSnapExtension: launchClaudeAction sender is NOT NSMenuItem", log: logger, type: .error)
-            return
-        }
 
-        // Finder occasionally drops representedObject on submenu items, so fall back to the
-        // menu title (which IS the provider key — we stopped appending model_name).
-        let providerKey: String
-        if let key = menuItem.representedObject as? String, !key.isEmpty {
-            providerKey = key
-        } else {
-            providerKey = menuItem.title
-        }
-        guard !providerKey.isEmpty else {
-            os_log("TermSnapExtension: cannot derive provider key from menu item", log: logger, type: .error)
-            return
-        }
-
-        let dirPath = getTargetURL().path
-        os_log("TermSnapExtension: Requesting Claude launch (provider=%{public}s) at %{public}s",
-               log: logger, type: .info, providerKey, dirPath)
-
-        if let defaults = UserDefaults(suiteName: suiteName) {
-            defaults.set(dirPath, forKey: ClaudeLaunchRequest.pathKey)
-            defaults.set(providerKey, forKey: ClaudeLaunchRequest.providerKey)
-            defaults.synchronize()
-            notifyMainApp()
-        }
-    }
 
     @objc func createFileAction(_ sender: AnyObject?) {
         os_log("TermSnapExtension: createFileAction triggered", log: logger, type: .info)

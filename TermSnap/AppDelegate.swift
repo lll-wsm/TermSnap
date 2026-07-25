@@ -11,8 +11,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusBarController.setup()
 
-        // Bootstrap Claude Code provider config (writes default sample on first run).
-        ClaudeModelsConfig.bootstrapIfNeeded()
+
 
         // Register global shortcut
         setupGlobalShortcut()
@@ -83,27 +82,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
-        // 1b. Process Claude Code launch request (path + provider key).
-        let claudePath = sharedDefaults.string(forKey: ClaudeLaunchRequest.pathKey) ?? ""
-        let claudeProviderKey = sharedDefaults.string(forKey: ClaudeLaunchRequest.providerKey) ?? ""
-        if !claudePath.isEmpty && !claudeProviderKey.isEmpty {
-            os_log("TermSnap: Processing Claude launch (provider=%{public}s) at %{public}s",
-                   log: logger, type: .info, claudeProviderKey, claudePath)
-            Task { @MainActor in
-                defer {
-                    sharedDefaults.removeObject(forKey: ClaudeLaunchRequest.pathKey)
-                    sharedDefaults.removeObject(forKey: ClaudeLaunchRequest.providerKey)
-                    sharedDefaults.synchronize()
-                }
-                guard let cfg = ClaudeModelsConfig.load(),
-                      let provider = cfg.provider(forKey: claudeProviderKey) else {
-                    os_log("TermSnap: Claude provider '%{public}s' not found in config",
-                           log: logger, type: .error, claudeProviderKey)
-                    return
-                }
-                ClaudeLauncher.launch(at: claudePath, provider: provider)
-            }
-        }
+
 
         // 2. Process File Creation Request
         let templatePath = sharedDefaults.string(forKey: "createFileTemplatePath") ?? ""

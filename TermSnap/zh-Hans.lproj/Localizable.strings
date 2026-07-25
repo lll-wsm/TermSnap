@@ -71,13 +71,3 @@
 "Select a category" = "请选择分类";
 "Finder Integration" = "Finder 集成";
 
-"Claude Code" = "Claude Code";
-"Claude Code (Submenu)" = "Claude Code（子菜单）";
-"Show Icons for Claude Code" = "显示 Claude Code 图标";
-"Claude Code Providers" = "Claude Code 模型";
-"No providers configured. Open claude-models.json to add some." = "尚未配置模型，打开 claude-models.json 添加。";
-"Open claude-models.json" = "打开 claude-models.json";
-"Reload" = "重新加载";
-"Toggle providers on/off to control what appears in the Finder right-click menu. Adding a new provider in claude-models.json shows up automatically." = "通过开关控制 Finder 右键菜单中显示哪些模型。在 claude-models.json 中新增的模型会自动出现。";
-"Claude Code (`claude`) was not found in your shell PATH.\n\nInstall it first:\n  npm install -g @anthropic-ai/claude-code\n\nor visit https://claude.com/claude-code" = "未在 shell PATH 中检测到 Claude Code（`claude` 命令）。\n\n请先安装：\n  npm install -g @anthropic-ai/claude-code\n\n或访问 https://claude.com/claude-code";
-"Checking for claude…" = "正在检测 claude…";

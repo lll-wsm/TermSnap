@@ -71,13 +71,3 @@
 "Select a category" = "Select a category";
 "Finder Integration" = "Finder Integration";
 
-"Claude Code" = "Claude Code";
-"Claude Code (Submenu)" = "Claude Code (Submenu)";
-"Show Icons for Claude Code" = "Show Icons for Claude Code";
-"Claude Code Providers" = "Claude Code Providers";
-"No providers configured. Open claude-models.json to add some." = "No providers configured. Open claude-models.json to add some.";
-"Open claude-models.json" = "Open claude-models.json";
-"Reload" = "Reload";
-"Toggle providers on/off to control what appears in the Finder right-click menu. Adding a new provider in claude-models.json shows up automatically." = "Toggle providers on/off to control what appears in the Finder right-click menu. Adding a new provider in claude-models.json shows up automatically.";
-"Claude Code (`claude`) was not found in your shell PATH.\n\nInstall it first:\n  npm install -g @anthropic-ai/claude-code\n\nor visit https://claude.com/claude-code" = "Claude Code (`claude`) was not found in your shell PATH.\n\nInstall it first:\n  npm install -g @anthropic-ai/claude-code\n\nor visit https://claude.com/claude-code";
-"Checking for claude…" = "Checking for claude…";

@@ -51,35 +51,4 @@ enum AppSettings {
     static var menuLayout: String {
         get { defaults.string(forKey: "menuLayout") ?? "nested" }
         set { defaults.set(newValue, forKey: "menuLayout") }
-    }
-
-    /// Whether the Finder right-click menu shows the "Claude Code →" submenu. Default OFF.
-    static var showClaudeCodeMenu: Bool {
-        get { defaults.bool(forKey: "showClaudeCodeMenu") }
-        set { defaults.set(newValue, forKey: "showClaudeCodeMenu") }
-    }
-
-    /// Whether each provider in the Finder "Claude Code →" submenu shows its icon. Default ON.
-    /// Mirrors the existing `showTemplateIcons` pattern.
-    static var showClaudeCodeIcons: Bool {
-        get { defaults.object(forKey: "showClaudeCodeIcons") == nil ? true : defaults.bool(forKey: "showClaudeCodeIcons") }
-        set { defaults.set(newValue, forKey: "showClaudeCodeIcons") }
-    }
-
-    /// Keys (matching `claude-models.json` model keys) the user has hidden from the Finder menu.
-    /// Inverted semantics vs `enabledTemplates`: NEW providers default to ENABLED (not in the
-    /// list), so adding a provider in JSON automatically shows up without re-toggling in Settings.
-    static var disabledProviders: [String] {
-        get { defaults.stringArray(forKey: "disabledProviders") ?? [] }
-        set { defaults.set(newValue, forKey: "disabledProviders") }
-    }
-}
-
-/// UserDefaults keys for the "launch claude in a provider" cross-process request.
-/// Mirrors the existing `lastOpenTerminalPath` / `createFile…` channel — Finder extension
-/// writes both keys then posts the shared Darwin notification; AppDelegate.processRequests()
-/// consumes them.
-enum ClaudeLaunchRequest {
-    static let pathKey = "claudeLaunchPath"
-    static let providerKey = "claudeLaunchProvider"
-}
+    }}
