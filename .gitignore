@@ -52,3 +52,5 @@ build/
 .temp
 tmp/
 *.log
+.antigravitycli/
+.codegraph/
